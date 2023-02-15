@@ -31,6 +31,36 @@ warnings.filterwarnings("ignore")
 import requests
 from urllib.parse import urlencode
 
+class Logger():
+    def __init__(self, name = 'Fuzzy Lookup',
+                 strfmt = '[%(asctime)s] [%(levelname)s] > %(message)s', # strfmt = '[%(asctime)s] [%(name)s] [%(levelname)s] > %(message)s'
+                 level = logging.INFO,
+                 datefmt = '%H:%M:%S', # '%Y-%m-%d %H:%M:%S'
+
+                 ):
+        self.name = name
+        self.strfmt = strfmt
+        self.level = level
+        self.datefmt = datefmt
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(self.level) #logging.INFO)
+        # self.logger.setLevel(logging.NOTSET) #logging.INFO)
+        # create console handler and set level to debug
+        self.ch = logging.StreamHandler()
+        self.ch.setLevel(self.level)
+        # create formatter
+        self.strfmt = strfmt # '[%(asctime)s] [%(levelname)s] > %(message)s'
+        strfmt = '%(asctime)s - %(levelname)s > %(message)s'
+        # строка формата времени
+        #datefmt = '%Y-%m-%d %H:%M:%S'
+        self.datefmt = datefmt # '%H:%M:%S'
+        # создаем форматтер
+        self.formatter = logging.Formatter(fmt=strfmt, datefmt=datefmt)
+        # add formatter to ch
+        self.ch.setFormatter(self.formatter)
+        # add ch to logger
+        self.logger.addHandler(self.ch)
+
 def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
     offset = datetime.timezone(datetime.timedelta(hours=3))
     dt = datetime.datetime.now(offset)
@@ -104,30 +134,34 @@ def unzip_file(path_source, fn_zip, work_path):
         logger.error('Unzip error: ' + str(err))
         sys.exit(2)
 
-def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', links = [
-    ('df_mi_national_release_20230201_2023_02_06_1013.zip', 'https://disk.yandex.ru/d/pfgyT_zmcYrHBw' ),
-    ('df_mi_org_gos_release_20230129_2023_02_14_1759.zip', 'https://disk.yandex.ru/d/xYolPYsHiSFEWA' ),
-    ('df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.zip', 'https://disk.yandex.ru/d/fnBfPpB8L-mJaw' ),
-    # ('Специальность (унифицированный).xlsx', 'https://disk.yandex.ru/i/au5M0xyVDW2mtQ', None),
-    ]):
+def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', links = {
+    'df_mi_national': {'fn': 'df_mi_national_release_20230201_2023_02_06_1013.zip', 'ya_link': 'https://disk.yandex.ru/d/pfgyT_zmcYrHBw' },
+    'df_mi_org_gos' : {'fn': 'df_mi_org_gos_release_20230129_2023_02_14_1759.zip', 'ya_link': 'https://disk.yandex.ru/d/xYolPYsHiSFEWA' },
+    'df_mi_org_gos_prod_options': {'fn': 'df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.zip', 'ya_link': 'https://disk.yandex.ru/d/fnBfPpB8L-mJaw' },
+    'dict_embedding_gos_multy' :{'fn': 'dict_embedding_gos_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/mArd7T-od6NcaQ'},
+    'dict_embedding_gos_prod_options_multy': {'fn': 'dict_embedding_gos_prod_options_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/c2PdgI4JCbnWaA'},
+    'dict_embedding_national_multy' : {'fn': 'dict_embedding_national_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/2qio4quws5IcUQ'},
+}):
     base_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?'
     # public_key = link #'https://yadi.sk/d/UJ8VMK2Y6bJH7A'  # Сюда вписываете вашу ссылку
 
     # Получаем загрузочную ссылку
-    for link_t in links:
-        final_url = base_url + urlencode(dict(public_key=link_t[1]))
+    for link in tqdm(links.values()):
+        final_url = base_url + urlencode(dict(public_key=link['ya_link']))
+        
         response = requests.get(final_url)
         download_url = response.json()['href']
 
         # Загружаем файл и сохраняем его
         download_response = requests.get(download_url)
         # with open('downloaded_file.txt', 'wb') as f:   # Здесь укажите нужный путь к файлу
-        with open(os.path.join(supp_dict_dir, link_t[0]), 'wb') as f:   # Здесь укажите нужный путь к файлу
+        with open(os.path.join(supp_dict_dir, link['fn']), 'wb') as f:   # Здесь укажите нужный путь к файлу
             f.write(download_response.content)
-            logger.info(f"File '{link_t[0]}' uploaded!")
-            if link_t[0].split('.')[-1] == 'zip':
-                fn_unzip = unzip_file(os.path.join(supp_dict_dir, link_t[0]), '', supp_dict_dir)
+            logger.info(f"File '{link['fn']}' uploaded!")
+            if link['fn'].split('.')[-1] == 'zip':
+                fn_unzip = unzip_file(os.path.join(supp_dict_dir, link['fn']), '', supp_dict_dir)
                 logger.info(f"File '{fn_unzip}' upzipped!")    
+
 def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
       fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle',
       fn_df_mi_org_gos ='df_mi_org_gos_release_20230129_2023_02_14_1759.pickle',
