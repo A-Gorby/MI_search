@@ -1,0 +1,20 @@
+torch
+# numpy
+pandas == 1.4.1
+xlrd == 2.0.1
+scipy
+#tqdm
+#razdel
+scikit-learn
+spacy
+# python -m spacy download en_core_web_lg
+sentence-transformers
+openpyxl
+
+faiss-cpu
+#faiss-gpu
+# You also need to have libomp and libopenblas available. 
+# On ubuntu you can install these with apt install libopenblas-base libomp-dev
+
+fuzzywuzzy
+python-Levenshtein
