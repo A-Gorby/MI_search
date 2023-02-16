@@ -60,6 +60,7 @@ class Logger():
         self.ch.setFormatter(self.formatter)
         # add ch to logger
         self.logger.addHandler(self.ch)
+logger = Logger().logger
 
 def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
     offset = datetime.timezone(datetime.timedelta(hours=3))
@@ -189,21 +190,6 @@ def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
     
     return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
           dict_embedding_gos_multy, dict_embedding_national_multy, dict_embedding_gos_prod_options_multy
-
-def upload_dictionaries(supp_dict_dir, data_links):
-    upload_files_for_fuzzy_search(supp_dict_dir, links = data_links)
-    df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
-    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy\
-     = load_check_dictionaries_for_fuzzy_search( supp_dict_dir,
-      fn_df_mi_national = data_links['df_mi_national']['fn'],
-      fn_df_mi_org_gos = data_links['df_mi_org_gos']['fn'],
-      fn_df_mi_org_gos_prod_options = data_links['df_mi_org_gos_prod_options']['fn'],
-      fn_dict_embedding_gos_multy = data_links['dict_embedding_gos_multy']['fn'],
-      fn_dict_embedding_gos_prod_options_multy = data_links['dict_embedding_gos_prod_options_multy']['fn'],
-      fn_dict_embedding_national_multy = data_links['dict_embedding_national_multy']['fn'],
-    )
-    return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
-    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy
 
 def save_to_excel(df_total, total_sheet_names, save_path, fn):
     # fn = model + '.xlsx'
@@ -367,3 +353,16 @@ def search_product_options_by_str_list(s_lst):
         
     else:
         return code_gos, name_gos, product_options_gos    
+
+def upload_check_dictionaries(supp_dict_dir, data_links):
+    upload_files_for_fuzzy_search(supp_dict_dir, links = data_links)
+    df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy = load_check_dictionaries_for_fuzzy_search( supp_dict_dir,
+      fn_df_mi_national = data_links['df_mi_national']['fn'],
+      fn_df_mi_org_gos = data_links['df_mi_org_gos']['fn'],
+      fn_df_mi_org_gos_prod_options = data_links['df_mi_org_gos_prod_options']['fn'],
+      fn_dict_embedding_gos_multy = data_links['dict_embedding_gos_multy']['fn'],
+      fn_dict_embedding_gos_prod_options_multy = data_links['dict_embedding_gos_prod_options_multy']['fn'],
+      fn_dict_embedding_national_multy = data_links['dict_embedding_national_multy']['fn'],
+    )
+    return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy        
