@@ -1,5 +1,5 @@
 import pandas as pd
-print(pd.__version__)
+# print(pd.__version__)
 import numpy as np
 import os, sys, glob
 import humanize
@@ -165,11 +165,15 @@ def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', lin
 def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
       fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle',
       fn_df_mi_org_gos ='df_mi_org_gos_release_20230129_2023_02_14_1759.pickle',
-      fn_df_mi_org_gos_prod_options ='df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.pickle'
+      fn_df_mi_org_gos_prod_options ='df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.pickle',
+      fn_dict_embedding_gos_multy = 'dict_embedding_gos_multy.pickle', 
+      fn_dict_embedding_gos_prod_options_multy = 'dict_embedding_gos_prod_options_multy.pickle',
+      fn_dict_embedding_national_multy = 'dict_embedding_national_multy.pickle',
     ):
     # global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options
     
     df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options = None, None, None
+    dict_embedding_gos_multy, dict_embedding_national_multy, dict_embedding_gos_prod_options_multy = None, None, None
     
     # fn_df_mi_org_gos = 'df_mi_org_gos_release_20230129_2023_02_07_1331.pickle'
     # fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle'
@@ -178,9 +182,28 @@ def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
     df_mi_org_gos = restore_df_from_pickle(path_supp_dicts, fn_df_mi_org_gos)
     df_mi_national = restore_df_from_pickle(path_supp_dicts, fn_df_mi_national)
     df_mi_org_gos_prod_options = restore_df_from_pickle(path_supp_dicts, fn_df_mi_org_gos_prod_options)
+    dict_embedding_gos_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_multy )
+    dict_embedding_national_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_national_multy )
+    dict_embedding_gos_prod_options_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_prod_options_multy )
     
     
-    return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options 
+    return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
+          dict_embedding_gos_multy, dict_embedding_national_multy, dict_embedding_gos_prod_options_multy
+
+def upload_dictionaries(supp_dict_dir, data_links):
+    upload_files_for_fuzzy_search(supp_dict_dir, links = data_links)
+    df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy\
+     = load_check_dictionaries_for_fuzzy_search( supp_dict_dir,
+      fn_df_mi_national = data_links['df_mi_national']['fn'],
+      fn_df_mi_org_gos = data_links['df_mi_org_gos']['fn'],
+      fn_df_mi_org_gos_prod_options = data_links['df_mi_org_gos_prod_options']['fn'],
+      fn_dict_embedding_gos_multy = data_links['dict_embedding_gos_multy']['fn'],
+      fn_dict_embedding_gos_prod_options_multy = data_links['dict_embedding_gos_prod_options_multy']['fn'],
+      fn_dict_embedding_national_multy = data_links['dict_embedding_national_multy']['fn'],
+    )
+    return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy
 
 def save_to_excel(df_total, total_sheet_names, save_path, fn):
     # fn = model + '.xlsx'
