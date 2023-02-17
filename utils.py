@@ -135,61 +135,6 @@ def unzip_file(path_source, fn_zip, work_path):
         logger.error('Unzip error: ' + str(err))
         sys.exit(2)
 
-def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', links = {
-    'df_mi_national': {'fn': 'df_mi_national_release_20230201_2023_02_06_1013.zip', 'ya_link': 'https://disk.yandex.ru/d/pfgyT_zmcYrHBw' },
-    'df_mi_org_gos' : {'fn': 'df_mi_org_gos_release_20230129_2023_02_14_1759.zip', 'ya_link': 'https://disk.yandex.ru/d/xYolPYsHiSFEWA' },
-    'df_mi_org_gos_prod_options': {'fn': 'df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.zip', 'ya_link': 'https://disk.yandex.ru/d/fnBfPpB8L-mJaw' },
-    'dict_embedding_gos_multy' :{'fn': 'dict_embedding_gos_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/mArd7T-od6NcaQ'},
-    'dict_embedding_gos_prod_options_multy': {'fn': 'dict_embedding_gos_prod_options_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/c2PdgI4JCbnWaA'},
-    'dict_embedding_national_multy' : {'fn': 'dict_embedding_national_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/2qio4quws5IcUQ'},
-}):
-    base_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?'
-    # public_key = link #'https://yadi.sk/d/UJ8VMK2Y6bJH7A'  # Сюда вписываете вашу ссылку
-
-    # Получаем загрузочную ссылку
-    for link in tqdm(links.values()):
-        final_url = base_url + urlencode(dict(public_key=link['ya_link']))
-        
-        response = requests.get(final_url)
-        download_url = response.json()['href']
-
-        # Загружаем файл и сохраняем его
-        download_response = requests.get(download_url)
-        # with open('downloaded_file.txt', 'wb') as f:   # Здесь укажите нужный путь к файлу
-        with open(os.path.join(supp_dict_dir, link['fn']), 'wb') as f:   # Здесь укажите нужный путь к файлу
-            f.write(download_response.content)
-            logger.info(f"File '{link['fn']}' uploaded!")
-            if link['fn'].split('.')[-1] == 'zip':
-                fn_unzip = unzip_file(os.path.join(supp_dict_dir, link['fn']), '', supp_dict_dir)
-                logger.info(f"File '{fn_unzip}' upzipped!")    
-
-def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
-      fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle',
-      fn_df_mi_org_gos ='df_mi_org_gos_release_20230129_2023_02_14_1759.pickle',
-      fn_df_mi_org_gos_prod_options ='df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.pickle',
-      fn_dict_embedding_gos_multy = 'dict_embedding_gos_multy.pickle', 
-      fn_dict_embedding_gos_prod_options_multy = 'dict_embedding_gos_prod_options_multy.pickle',
-      fn_dict_embedding_national_multy = 'dict_embedding_national_multy.pickle',
-    ):
-    # global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options
-    
-    df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options = None, None, None
-    dict_embedding_gos_multy, dict_embedding_national_multy, dict_embedding_gos_prod_options_multy = None, None, None
-    
-    # fn_df_mi_org_gos = 'df_mi_org_gos_release_20230129_2023_02_07_1331.pickle'
-    # fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle'
-    # fn_df_mi_org_gos ='df_mi_org_gos_release_20230129_2023_02_14_1759.pickle'
-    # fn_df_mi_org_gos_prod_options ='df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.pickle'
-    df_mi_org_gos = restore_df_from_pickle(path_supp_dicts, fn_df_mi_org_gos)
-    df_mi_national = restore_df_from_pickle(path_supp_dicts, fn_df_mi_national)
-    df_mi_org_gos_prod_options = restore_df_from_pickle(path_supp_dicts, fn_df_mi_org_gos_prod_options)
-    dict_embedding_gos_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_multy )
-    dict_embedding_national_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_national_multy )
-    dict_embedding_gos_prod_options_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_prod_options_multy )
-    
-    
-    return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
-          dict_embedding_gos_multy, dict_embedding_national_multy, dict_embedding_gos_prod_options_multy
 
 def save_to_excel(df_total, total_sheet_names, save_path, fn):
     # fn = model + '.xlsx'
@@ -354,15 +299,177 @@ def search_product_options_by_str_list(s_lst):
     else:
         return code_gos, name_gos, product_options_gos    
 
+def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
+      fn_df_mi_org_gos ='df_mi_org_gos_release_20230129_2023_02_14_1759.pickle',
+      fn_df_mi_org_gos_prod_options ='df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.pickle',
+      fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle',
+      fn_dict_embedding_gos_multy = 'dict_embedding_gos_multy.pickle', 
+      fn_dict_embedding_gos_prod_options_multy = 'dict_embedding_gos_prod_options_multy.pickle',
+      fn_dict_embedding_national_multy = 'dict_embedding_national_multy.pickle',
+    ):
+    # global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options
+    
+    df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national = None, None, None
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy = None, None, None
+    
+    # fn_df_mi_org_gos = 'df_mi_org_gos_release_20230129_2023_02_07_1331.pickle'
+    # fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle'
+    # fn_df_mi_org_gos ='df_mi_org_gos_release_20230129_2023_02_14_1759.pickle'
+    # fn_df_mi_org_gos_prod_options ='df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.pickle'
+    df_mi_org_gos = restore_df_from_pickle(path_supp_dicts, fn_df_mi_org_gos)
+    df_mi_org_gos_prod_options = restore_df_from_pickle(path_supp_dicts, fn_df_mi_org_gos_prod_options)
+    df_mi_national = restore_df_from_pickle(path_supp_dicts, fn_df_mi_national)
+    dict_embedding_gos_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_multy )
+    dict_embedding_gos_prod_options_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_prod_options_multy )
+    dict_embedding_national_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_national_multy )
+    
+    return df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, \
+          dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy
+
+
+def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', links = {
+    'df_mi_national': {'fn': 'df_mi_national_release_20230201_2023_02_06_1013.zip', 'ya_link': 'https://disk.yandex.ru/d/pfgyT_zmcYrHBw' },
+    'df_mi_org_gos' : {'fn': 'df_mi_org_gos_release_20230129_2023_02_14_1759.zip', 'ya_link': 'https://disk.yandex.ru/d/xYolPYsHiSFEWA' },
+    'df_mi_org_gos_prod_options': {'fn': 'df_mi_org_gos_prod_options_release_20230201_2023_02_14_1835.zip', 'ya_link': 'https://disk.yandex.ru/d/fnBfPpB8L-mJaw' },
+    'dict_embedding_gos_multy' :{'fn': 'dict_embedding_gos_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/mArd7T-od6NcaQ'},
+    'dict_embedding_gos_prod_options_multy': {'fn': 'dict_embedding_gos_prod_options_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/c2PdgI4JCbnWaA'},
+    'dict_embedding_national_multy' : {'fn': 'dict_embedding_national_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/2qio4quws5IcUQ'},
+}):
+    base_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?'
+    # public_key = link #'https://yadi.sk/d/UJ8VMK2Y6bJH7A'  # Сюда вписываете вашу ссылку
+
+    # Получаем загрузочную ссылку
+    for link in tqdm(links.values()):
+        final_url = base_url + urlencode(dict(public_key=link['ya_link']))
+        
+        response = requests.get(final_url)
+        download_url = response.json()['href']
+
+        # Загружаем файл и сохраняем его
+        download_response = requests.get(download_url)
+        # with open('downloaded_file.txt', 'wb') as f:   # Здесь укажите нужный путь к файлу
+        with open(os.path.join(supp_dict_dir, link['fn']), 'wb') as f:   # Здесь укажите нужный путь к файлу
+            f.write(download_response.content)
+            logger.info(f"File '{link['fn']}' uploaded!")
+            if link['fn'].split('.')[-1] == 'zip':
+                fn_unzip = unzip_file(os.path.join(supp_dict_dir, link['fn']), '', supp_dict_dir)
+                logger.info(f"File '{fn_unzip}' upzipped!")    
+
 def upload_check_dictionaries(supp_dict_dir, data_links):
     upload_files_for_fuzzy_search(supp_dict_dir, links = data_links)
-    df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy = load_check_dictionaries_for_fuzzy_search( supp_dict_dir,
-      fn_df_mi_national = data_links['df_mi_national']['fn'],
-      fn_df_mi_org_gos = data_links['df_mi_org_gos']['fn'],
-      fn_df_mi_org_gos_prod_options = data_links['df_mi_org_gos_prod_options']['fn'],
-      fn_dict_embedding_gos_multy = data_links['dict_embedding_gos_multy']['fn'],
-      fn_dict_embedding_gos_prod_options_multy = data_links['dict_embedding_gos_prod_options_multy']['fn'],
-      fn_dict_embedding_national_multy = data_links['dict_embedding_national_multy']['fn'],
+    df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, \
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy = \
+      load_check_dictionaries_for_fuzzy_search( supp_dict_dir,
+            fn_df_mi_org_gos = data_links['df_mi_org_gos']['fn'],
+            fn_df_mi_org_gos_prod_options = data_links['df_mi_org_gos_prod_options']['fn'],
+            fn_df_mi_national = data_links['df_mi_national']['fn'],
+            fn_dict_embedding_gos_multy = data_links['dict_embedding_gos_multy']['fn'],
+            fn_dict_embedding_gos_prod_options_multy = data_links['dict_embedding_gos_prod_options_multy']['fn'],
+            fn_dict_embedding_national_multy = data_links['dict_embedding_national_multy']['fn'],
     )
-    return df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options,\
-    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy        
+    return df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, \
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy   
+
+def test_inputs(data_source_dir, 
+              fn_check_file, sheet_name_check, col_name_check,
+              fn_dict_file, sheet_name_dict, col_names_dict, by_big_dict):
+    test_ok = True
+    if not os.path.exists (data_source_dir):
+        test_ok = False
+        logger.error(f"Path for source data '{data_source_dir}' not exists")
+    elif not os.path.isdir(data_source_dir):
+        test_ok = False
+        logger.error(f"'{data_source_dir}' is not a dir")
+    else:
+        if fn_check_file is None or not os.path.exists(os.path.join(data_source_dir, fn_check_file)):
+            test_ok = False
+            logger.error(f"Check file '{fn_check_file}' not found")
+        
+        if fn_dict_file is None and by_big_dict:
+            pass
+        elif not os.path.exists(os.path.join(data_source_dir, fn_dict_file)):
+            test_ok = False
+            logger.error(f"Dictionary file '{fn_dict_file}' not found")
+    return test_ok
+
+
+
+
+def read_check_file(path_check_file, fn_check_file, sheet_name, col_name):
+    df = None
+    read_ok = True
+    try:
+        df = pd.read_excel(os.path.join(path_check_file, fn_check_file), sheet_name=sheet_name, )
+        if df.shape[1] == 1:
+            logger.info("Check file read: shape: " + str(df.shape) )
+            if not col_name in df.columns:
+                old_col_name = df.columns[0]
+                df.rename(columns = {old_col_name: col_name}, inplace=True)
+                logger.info(f"Check file: Column '{old_col_name}' renamed to '{col_name}'")
+        elif col_name in df.columns:
+            df = df[[col_name]]
+            logger.info("Check file read: shape: " + str(df.shape) )
+        else:
+            logger.error(f"Check file: Not found need column: '{col_name}'")
+            read_ok = False
+    except Exception as err:
+        logger.error(f"Check file: {err}")
+        read_ok = False
+        # if f"Worksheet named '{sheet_name}' not found" in err:
+
+    return df, read_ok
+
+def read_test_dictionary(path_dict_file, fn_dict_file, sheet_name, col_names):
+    df = None
+    read_ok = True
+    try:
+        df = pd.read_excel(os.path.join(path_dict_file, fn_dict_file), sheet_name=sheet_name, )
+        if df.shape[1] == 2:
+            if set(col_names).issubset(df.columns):
+                logger.info("Dictionary file read: shape: " + str(df.shape) )
+                # df.rename(columns = {df.columns[0]: col_name}, inplace=True)
+            else:
+                logger.error(f"Dictionary file: Not found need columns: '{col_names}'")
+                read_ok = False                
+        elif set(col_names).issubset(df.columns):
+            df = df[col_names]
+            logger.info("Dictionary file read: shape: " + str(df.shape) )
+        else:
+            logger.error(f"Dictionary file: Not found need columns: '{col_names}'")
+            read_ok = False
+    except Exception as err:
+        logger.error(f"Dictionary file: {err}")
+        read_ok = False
+    return df, read_ok
+
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
+def fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf):
+    def get_code_name(tuple_name_sim_lst, name_col_dict, code_col_dict, similarity_threshold):
+        # name = dict_lst[id]
+        # values = df_dict.query("@name_col_dict=@name")[[name_col_dict, code_col_dict]].values
+        rez = [] # np.array([[], [], []])
+        for name, similarity in tuple_name_sim_lst:
+            # print("name, similarity", name, similarity, similarity_threshold*100)
+            if similarity >= similarity_threshold*100:
+                values = df_dict[df_dict[name_col_dict_local]==name][[code_col_dict_local, name_col_dict_local]].values
+                # print("values", values)
+                rez.append(np.array([similarity, np_unique_nan(values[:,0]), np_unique_nan(values[:,1])], dtype=object))
+            else: break
+        return np.array(rez)
+
+    dict_lst = df_dict[name_col_dict_local].unique()
+    # dict_lst[:2]
+    df_test[new_cols_fuzzy] = None
+    for i_row, row in tqdm(df_test.iterrows(), total = df_test.shape[0]):
+        if i_row > n_rows: break
+        s = row[col_name_check]
+        tuple_name_sim_lst = process.extract(s, dict_lst, limit=max_sim_entries)
+        # print(i_row, s, tuple_name_sim_lst)
+        values = get_code_name(tuple_name_sim_lst, code_col_dict_local, name_col_dict_local, similarity_threshold)
+        # print()
+        # print(values)
+        if len(values)>0:
+            df_test.loc[i_row, new_cols_fuzzy] = np_unique_nan(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2]) 
+    return df_test
+
