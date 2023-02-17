@@ -5,4 +5,5 @@ data_links = {
     'dict_embedding_gos_multy' :{'fn': 'dict_embedding_gos_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/mArd7T-od6NcaQ'},
     'dict_embedding_gos_prod_options_multy': {'fn': 'dict_embedding_gos_prod_options_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/c2PdgI4JCbnWaA'},
     'dict_embedding_national_multy' : {'fn': 'dict_embedding_national_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/2qio4quws5IcUQ'},
+    'dict_lst_gos_prod_options' : {'fn': 'dict_lst_gos_prod_options.pickle',  'ya_link': 'https://disk.yandex.ru/d/QBhdbktm2_25Ew'},
 }

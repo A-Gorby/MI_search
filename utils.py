@@ -171,9 +171,9 @@ def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
     if e is None or (e <0):
         e = df.shape[0]
     if columns is None:
-        df[b:e].to_excel(path_to_save + fn, index = False)
+        df[b:e].to_excel(os.path.join(path_to_save,fn), index = False)
     else:
-        df[b:e].to_excel(path_to_save + fn, index = False, columns = columns)
+        df[b:e].to_excel(os.path.join(path_to_save,fn), index = False, columns = columns)
     logger.info(f"'{fn}' saved to '{path_to_save}'")
     hfs = get_humanize_filesize(path_to_save, fn)
     logger.info("Size: " + str(hfs))
@@ -190,7 +190,9 @@ def np_unique_nan(lst: np.array, debug = False)->np.array: # a la version 2.4
         if ((type(lst)==list) or (type(lst)==np.ndarray)):
             if debug: print('np_unique_nan:','if ((type(lst)==list) or (type(lst)==np.ndarray)):')
             if len(data_types_set) > 1: # несколько типов данных
-                if list not in data_types_set and dict not in data_types_set and tuple not in data_types_set and type(None) not in data_types_set:
+                if list not in data_types_set and dict not in data_types_set \
+                      and tuple not in data_types_set and type(None) not in data_types_set\
+                      and np.ndarray not in data_types_set: # upd 17/02/2023
                     lst_unique = np.array(list(set(lst)), dtype=object)
                 else:
                     lst_unique = lst
@@ -306,6 +308,7 @@ def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
       fn_dict_embedding_gos_multy = 'dict_embedding_gos_multy.pickle', 
       fn_dict_embedding_gos_prod_options_multy = 'dict_embedding_gos_prod_options_multy.pickle',
       fn_dict_embedding_national_multy = 'dict_embedding_national_multy.pickle',
+      fn_dict_lst_gos_prod_options ='dict_lst_gos_prod_options.pickle',
     ):
     # global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national, df_mi_org_gos_prod_options
     
@@ -322,9 +325,10 @@ def load_check_dictionaries_for_fuzzy_search(path_supp_dicts,
     dict_embedding_gos_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_multy )
     dict_embedding_gos_prod_options_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_gos_prod_options_multy )
     dict_embedding_national_multy = restore_df_from_pickle(path_supp_dicts, fn_dict_embedding_national_multy )
+    dict_lst_gos_prod_options = restore_df_from_pickle(path_supp_dicts, fn_dict_lst_gos_prod_options)
     
     return df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, \
-          dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy
+          dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options
 
 
 def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', links = {
@@ -334,6 +338,7 @@ def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', lin
     'dict_embedding_gos_multy' :{'fn': 'dict_embedding_gos_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/mArd7T-od6NcaQ'},
     'dict_embedding_gos_prod_options_multy': {'fn': 'dict_embedding_gos_prod_options_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/c2PdgI4JCbnWaA'},
     'dict_embedding_national_multy' : {'fn': 'dict_embedding_national_multy.pickle', 'ya_link': 'https://disk.yandex.ru/d/2qio4quws5IcUQ'},
+    'dict_lst_gos_prod_options' : {'fn': 'dict_lst_gos_prod_options.pickle',  'ya_link': 'https://disk.yandex.ru/d/QBhdbktm2_25Ew'},
 }):
     base_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?'
     # public_key = link #'https://yadi.sk/d/UJ8VMK2Y6bJH7A'  # Сюда вписываете вашу ссылку
@@ -358,7 +363,7 @@ def upload_files_for_fuzzy_search(supp_dict_dir = '/content/data/supp_dict', lin
 def upload_check_dictionaries(supp_dict_dir, data_links):
     upload_files_for_fuzzy_search(supp_dict_dir, links = data_links)
     df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, \
-    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy = \
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = \
       load_check_dictionaries_for_fuzzy_search( supp_dict_dir,
             fn_df_mi_org_gos = data_links['df_mi_org_gos']['fn'],
             fn_df_mi_org_gos_prod_options = data_links['df_mi_org_gos_prod_options']['fn'],
@@ -366,9 +371,10 @@ def upload_check_dictionaries(supp_dict_dir, data_links):
             fn_dict_embedding_gos_multy = data_links['dict_embedding_gos_multy']['fn'],
             fn_dict_embedding_gos_prod_options_multy = data_links['dict_embedding_gos_prod_options_multy']['fn'],
             fn_dict_embedding_national_multy = data_links['dict_embedding_national_multy']['fn'],
+            fn_dict_lst_gos_prod_options =data_links['dict_lst_gos_prod_options']['fn'],
     )
     return df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, \
-    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy   
+    dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options
 
 def test_inputs(data_source_dir, 
               fn_check_file, sheet_name_check, col_name_check,
@@ -473,3 +479,94 @@ def fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_co
             df_test.loc[i_row, new_cols_fuzzy] = np_unique_nan(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2]) 
     return df_test
 
+from openpyxl import load_workbook
+from openpyxl import Workbook
+from openpyxl.comments import Comment
+from openpyxl.styles import colors
+from openpyxl.styles import Font, Color
+from openpyxl.utils import units
+from openpyxl.styles import Border, Side, PatternFill, GradientFill, Alignment
+
+new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
+new_cols_semantic = ['sim_semantic_1_local', 'code_semantic_1_local', 'name_semantic_1_local']
+new_cols_semantic_gos = ['sim_semantic_2_gos', 'code_semantic_2_gos', 'name_semantic_2_gos']
+new_cols_semantic_national = ['sim_semantic_3_national', 'code_semantic_3_national', 'name_semantic_3_national']
+new_cols_semantic_gos_options = ['sim_semantic_4_gos_option', 'option_semantic_4_gos_option', 'code_semantic_4_gos_option', 'name_semantic_4_gos_option']
+# similarity_threshold = .8
+# max_sim_entries = 2
+def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold):
+    nums_lst = []
+    total_num_recs = df_test.shape[0]
+    nums_lst.append(['total_num_recs', total_num_recs])
+    try:
+        num_found_rec_fuzzy = df_test[df_test['sim_fuzzy_name'].notnull()].shape[0]
+        nums_lst.append(['num_found_rec_fuzzy', num_found_rec_fuzzy])
+    except:
+        num_found_rec_fuzzy = None
+    try:
+        num_found_rec_semantic_1_local = df_test[df_test['name_semantic_1_local'].notnull()].shape[0]
+        nums_lst.append(['num_found_rec_semantic_1_local', num_found_rec_semantic_1_local])
+    except:
+        num_found_rec_semantic_1_local = None
+    # print(f"num_found_rec_semantic_1_local: {num_found_rec_semantic_1_local}")
+    try:
+        num_found_rec_semantic_2_gos = df_test[df_test['name_semantic_2_gos'].notnull()].shape[0]
+        nums_lst.append(['num_found_rec_semantic_2_gos', num_found_rec_semantic_2_gos])
+    except:
+        num_found_rec_semantic_2_gos = None
+    try:
+        num_found_rec_semantic_3_national = df_test[df_test['name_semantic_3_national'].notnull()].shape[0]
+        nums_lst.append(['num_found_rec_semantic_3_national', num_found_rec_semantic_3_national])
+    except:
+        num_found_rec_semantic_3_national = None
+    try:
+        num_found_rec_semantic_4_gos_option = df_test[df_test['option_semantic_4_gos_option'].notnull()].shape[0]
+        nums_lst.append(['num_found_rec_semantic_4_gos_option', num_found_rec_semantic_4_gos_option])
+    except:
+        num_found_rec_semantic_4_gos_option = None
+    print(f"total_num_recs: {total_num_recs}",
+          f"\nnum_found_rec_fuzzy: {num_found_rec_fuzzy}" if num_found_rec_fuzzy is not None else '',
+          f"\nnum_found_rec_semantic_1_local: {num_found_rec_semantic_1_local}" if num_found_rec_semantic_1_local is not None else '',
+          f"\nnum_found_rec_semantic_2_gos: {num_found_rec_semantic_2_gos}" if num_found_rec_semantic_2_gos is not None else '', 
+          f"\nnum_found_rec_semantic_3_national: {num_found_rec_semantic_3_national}" if num_found_rec_semantic_3_national is not None else '',
+          f"\nnum_found_rec_semantic_4_gos_option: {num_found_rec_semantic_4_gos_option}" if num_found_rec_semantic_4_gos_option is not None else '',
+          '')
+    
+    wb = Workbook()
+    ws = wb.active
+    # ws = wb['Statistics']
+    ws.title = 'Statistics'
+    alignment=Alignment(horizontal='left', #'general',
+                             vertical= 'top', #'bottom',
+                             text_rotation=0,
+                             wrap_text=True,
+                             shrink_to_fit=False,
+                             indent=0)
+    # cell = ws.cell(row=ir+1, column=ic+1 + desc_cols_num)
+    # cell.comment = None
+    cell = ws['A1']
+    cell.alignment = alignment
+    ws.column_dimensions[cell.column_letter].width = 40
+    cell = ws['B1']
+    alignment=Alignment(horizontal='right', #'general',
+                             vertical= 'top', #'bottom',
+                             text_rotation=0,
+                             wrap_text=True,
+                             shrink_to_fit=False,
+                             indent=0)
+    cell.alignment = alignment
+    ws.column_dimensions[cell.column_letter].width = 10
+
+    ws['A1'], ws['B1'] = 'max_sim_entries', max_sim_entries
+    ws['A2'], ws['B2'] = 'similarity_threshold, %', similarity_threshold
+    ws["B2"].number_format = "0%"
+    for lst in nums_lst:
+        ws.append(lst)
+    fn_main = fn_check_file.split('.xlsx')[0] + '_stat'
+    offset = datetime.timezone(datetime.timedelta(hours=3))
+    dt = datetime.datetime.now(offset)
+    str_date = dt.strftime("%Y_%m_%d_%H%M")
+    fn = fn_main + '_' + str_date + '.xlsx'
+    wb.save(os.path.join(data_processed_dir,fn))
+    logger.info("Файл статистикиЖ '{fn}' созранен в '{data_processed_dir}'")
+    return fn
