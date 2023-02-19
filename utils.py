@@ -31,6 +31,10 @@ warnings.filterwarnings("ignore")
 import requests
 from urllib.parse import urlencode
 
+import ipywidgets as widgets
+from IPython.display import display
+from ipywidgets import Layout, Box, Label
+
 class Logger():
     def __init__(self, name = 'Fuzzy Lookup',
                  strfmt = '[%(asctime)s] [%(levelname)s] > %(message)s', # strfmt = '[%(asctime)s] [%(name)s] [%(levelname)s] > %(message)s'
@@ -61,6 +65,7 @@ class Logger():
         # add ch to logger
         self.logger.addHandler(self.ch)
 logger = Logger().logger
+logger.propagate = False
 
 def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
     offset = datetime.timezone(datetime.timedelta(hours=3))
@@ -570,3 +575,119 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     wb.save(os.path.join(data_processed_dir,fn))
     logger.info("Файл статистикиЖ '{fn}' созранен в '{data_processed_dir}'")
     return fn
+
+def lst_2_s(lst):
+    if not (type(lst)==str) and ((type(lst)==list) or (type(lst)==np.ndarray)):
+        if len(lst)==1: rez = lst[0]
+        else: rez = lst
+    else: rez = lst[0]
+    return rez
+def semantic_search (df_test, col_name_check, 
+                     dict_unique, df_dict, name_col_dict, code_col_dict,
+                     option_col_dict,
+                     model, dict_embedding, 
+                     new_cols_semantic, 
+                     similarity_threshold, max_sim_entries=2, n_rows=np.inf,
+                     debug=False):
+    def get_code_name(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=False):
+        # name = dict_lst[id]
+        # values = df_dict.query("@name_col_dict=@name")[[name_col_dict, code_col_dict]].values
+        rez = [] # np.array([[], [], []])
+        # 'corpus_id': 182, 'score'
+        if len(dict_id_score_lst[0]) > 0:
+            for dict_id_score in dict_id_score_lst[0]:
+                if debug: print("get_code_name: dict_score_id", dict_id_score)
+                id, score = dict_id_score.values()
+                if debug: print(f"get_code_name: score: {score}, id : {id}")
+                if float(score) >= similarity_threshold:
+                    name = dict_unique[id]
+                    if option_col_dict is None:
+                        values = df_dict[df_dict[name_col_dict]==name][[code_col_dict, name_col_dict]].values
+                        try:
+                            rez.append(np.array([round(score*100), np_unique_nan(values[:,0]), np_unique_nan(values[:,1])], dtype=object))
+                        except Exception as err:
+                            if debug: print("get_code_name: ", err, values.shape, values)
+                            rez.append(np.array([round(score*100), values[:,0], values[:,1]], dtype=object))
+                    else:
+                        values = df_dict[df_dict[option_col_dict]==name][[option_col_dict, code_col_dict, name_col_dict]].values
+                        try:
+                            rez.append(np.array([round(score*100), np_unique_nan(values[:,0]), 
+                                             np_unique_nan(values[:,1]), np_unique_nan(values[:,2])], dtype=object))
+                        except Exception as err:
+                            if debug: print("get_code_name: ", err, values.shape, values)
+                            rez.append(np.array([round(score*100), values[:,0], values[:,1], values[:,2]], dtype=object))
+                else: break
+            
+            return np.array(rez)
+        else: 
+            if option_col_dict is None: return np.array([None, None, None])
+            else: return np.array([None, None, None, None])
+
+    df_test[new_cols_semantic] = None
+    for i_row, row in tqdm(df_test.iterrows(), total = df_test.shape[0]):
+    # for i_row, row in df_test.iterrows():
+        if i_row > n_rows: break
+        s = row[col_name_check]
+        # tuple_name_sim_lst = process.extract(s, dict_lst, limit=max_sim_entries)
+        query_embedding = model.encode(s) #row[col_name_check])
+        if debug: print("\nsemantic_search:", i_row, s)
+        dict_id_score_lst = util.semantic_search (query_embedding, dict_embedding, top_k = max_sim_entries)
+        if debug: print(f"semantic_search: dict_id_score_lst: {dict_id_score_lst}")
+        
+        values = get_code_name(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=debug)
+        if debug: 
+            print("semantic_search: -> get_code_name values:", values )
+            print()
+        # df_test.loc[i_row, ['sim_3_semantic_multy_lang_test', 'name_3_semantic_multy_lang_test', 'sim_4_semantic_multy_lang_test', 'name_4_semantic_multy_lang_test']] = \
+        #         round(rez[0][0]['score']*100), dict_lst[rez[0][0]['corpus_id']], round(rez[0][1]['score']*100), dict_lst[rez[0][1]['corpus_id']]
+        # Параметр limit по умолчанию имеет значение 5
+        
+        if len(values)>0:
+            if option_col_dict is None:
+                try:
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2])
+                except Exception as err:
+                    if debug: print("semantic_search:", err, values.shape, values)
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2]
+            else: 
+                # print(values.shape, values)
+                try:
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2]), np_unique_nan(values[:,3])
+                except Exception as err:
+                    if debug: print("semantic_search:", err, values.shape, values)
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2], values[:,3]
+
+    return df_test
+
+def load_sentence_model():
+    logger.info(f"MultyLangual model dounlowd - start...")
+    model = SentenceTransformer('multi-qa-MiniLM-L6-cos-v1')
+    logger.info(f"MultyLangual model dounlowd - done!")
+    return model
+
+fn_list = []
+    
+def def_form(fn_list):
+    fn_check_file_drop_douwn = widgets.Dropdown( options=fn_list, value=fn_list[0] if len(fn_list) > 0 else None, disabled=False)
+    fn_dict_file_drop_douwn = widgets.Dropdown( options= [None] + fn_list, value= None, disabled=False, )
+    radio_btn_big_dict = widgets.RadioButtons(options=['Да', 'Нет'], value= 'Да', disabled=False) # description='Check me',    , indent=False
+    radio_btn_prod_options = widgets.RadioButtons(options=['Да', 'Нет'], value= 'Нет', disabled=False if radio_btn_big_dict.value=='Да' else True )
+
+    form_item_layout = Layout(display='flex', flex_flow='row', justify_content='space-between')
+    check_box = Box([Label(value='Проверяемый файл:'), fn_check_file_drop_douwn], layout=form_item_layout) 
+    dict_box = Box([Label(value='Файл справочника:'), fn_dict_file_drop_douwn], layout=form_item_layout) 
+    big_dict_box = Box([Label(value='Использовать большие справочники:'), radio_btn_big_dict], layout=form_item_layout) 
+    prod_options_box = Box([Label(value='Искать в Вариантах исполнения (+10 мин):'), radio_btn_prod_options], layout=form_item_layout) 
+    form_items = [check_box, dict_box, big_dict_box, prod_options_box]
+    
+    form = Box(form_items, layout=Layout(display='flex', flex_flow= 'column', border='solid 2px', align_items='stretch', width='50%')) #width='auto'))
+    return form, fn_check_file_drop_douwn, fn_dict_file_drop_douwn, radio_btn_big_dict, radio_btn_prod_options
+    # form = Box(form_items, layout=Layout(display='flex', flex_flow= 'column', border='solid 2px', align_items='stretch', width='50%')) #width='auto'))
+def on_big_dict_value_change(change):
+    global radio_btn_prod_options
+    if change.new == 'Да':
+        radio_btn_prod_options.disabled = False 
+        # radio_btn_prod_options.value = 'Нет' 
+    else:
+        radio_btn_prod_options.disabled = True 
+        radio_btn_prod_options.value = 'Нет'     
