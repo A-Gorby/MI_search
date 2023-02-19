@@ -736,7 +736,7 @@ def on_big_dict_value_change(change):
         radio_btn_prod_options.disabled = True 
         radio_btn_prod_options.value = 'Нет'     
 
-
+df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = None, None, None, None, None, None, None
 def mi_search( data_source_dir, data_processed_dir,
               fn_check_file, sheet_name_check, col_name_check,
               fn_dict_file, sheet_name_dict, name_col_dict_local, code_col_dict_local,
@@ -744,9 +744,9 @@ def mi_search( data_source_dir, data_processed_dir,
               max_sim_entries=2,
               by_big_dict = False,
               by_prod_options = False,
+              df_dicts = [],
               debug=False
 ):
-    
     if fn_dict_file is None and not by_big_dict:
         by_big_dict = True
     test_ok = test_inputs(data_source_dir, 
@@ -795,10 +795,19 @@ def mi_search( data_source_dir, data_processed_dir,
                      similarity_threshold, max_sim_entries) #, n_rows=2)
         display(df_test.head(2))
     if by_big_dict:
+        df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = df_dicts
+        
         test_ok = test_big_dictionaries(df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options)
         if not test_ok:
            logger.error(f"Работа программы завершена")
            sys.exit(2)
+        else:
+            #global df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options
+            #print(df_mi_org_gos.shape, df_mi_org_gos_prod_options.shape, df_mi_national.shape)
+            #print(dict_embedding_gos_multy.shape, dict_embedding_gos_prod_options_multy.shape, dict_embedding_national_multy.shape)
+            #print(dict_lst_gos_prod_options.shape)
+            pass
+    
         new_cols_semantic_gos = ['sim_semantic_2_gos', 'code_semantic_2_gos', 'name_semantic_2_gos']
         name_col_dict_gos, code_col_dict_gos = 'name_clean', 'kind'
         option_col_dict_gos = None
