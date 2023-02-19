@@ -1,5 +1,5 @@
 import pandas as pd
-# print(pd.__version__)
+# # print(pd.__version__)
 import numpy as np
 import os, sys, glob
 import humanize
@@ -31,6 +31,18 @@ warnings.filterwarnings("ignore")
 import requests
 from urllib.parse import urlencode
 
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
+
+from openpyxl import load_workbook
+from openpyxl import Workbook
+from openpyxl.comments import Comment
+from openpyxl.styles import colors
+from openpyxl.styles import Font, Color
+from openpyxl.utils import units
+from openpyxl.styles import Border, Side, PatternFill, GradientFill, Alignment
+
+from sentence_transformers import SentenceTransformer, util
 import ipywidgets as widgets
 from IPython.display import display
 from ipywidgets import Layout, Box, Label
@@ -381,50 +393,76 @@ def upload_check_dictionaries(supp_dict_dir, data_links):
     return df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, \
     dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options
 
+def test_big_dictionaries(df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, 
+      dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options):
+    if df_mi_org_gos is None or df_mi_org_gos_prod_options is None or df_mi_national is None or  \
+        dict_embedding_gos_multy is None or dict_embedding_gos_prod_options_multy is None or dict_embedding_national_multy is None \
+        or dict_lst_gos_prod_options is None:
+        logger.error(f"Большие справочники не загружены")
+        test_ok = False
+    else: test_ok = True
+    return test_ok
+
 def test_inputs(data_source_dir, 
               fn_check_file, sheet_name_check, col_name_check,
-              fn_dict_file, sheet_name_dict, col_names_dict, by_big_dict):
+              fn_dict_file, sheet_name_dict, col_names_dict, by_big_dict
+              ):
+    # global df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options
     test_ok = True
     if not os.path.exists (data_source_dir):
         test_ok = False
-        logger.error(f"Path for source data '{data_source_dir}' not exists")
+        # logger.error(f"Path for source data '{data_source_dir}' not exists")
+        logger.error(f"Директория для входных данных '{data_source_dir}' не существует")
     elif not os.path.isdir(data_source_dir):
         test_ok = False
-        logger.error(f"'{data_source_dir}' is not a dir")
+        #logger.error(f"'{data_source_dir}' is not a dir")
+        logger.error(f"Директория для входных данных '{data_source_dir}' - не директория")
     else:
         if fn_check_file is None or not os.path.exists(os.path.join(data_source_dir, fn_check_file)):
             test_ok = False
-            logger.error(f"Check file '{fn_check_file}' not found")
+            # logger.error(f"Check file '{fn_check_file}' not found")
+            logger.error(f"Проверяемый файл '{fn_check_file}' не найден")
         
         if fn_dict_file is None and by_big_dict:
             pass
         elif not os.path.exists(os.path.join(data_source_dir, fn_dict_file)):
             test_ok = False
-            logger.error(f"Dictionary file '{fn_dict_file}' not found")
+            # logger.error(f"Dictionary file '{fn_dict_file}' not found")
+            logger.error(f"Файл справочника '{fn_dict_file}' не найден")
     return test_ok
 
-
-
-
-def read_check_file(path_check_file, fn_check_file, sheet_name, col_name):
+def read_check_file(path_check_file, fn_check_file, sheet_name, col_name= 'Наименование МИ/РМ'):
     df = None
     read_ok = True
     try:
-        df = pd.read_excel(os.path.join(path_check_file, fn_check_file), sheet_name=sheet_name, )
+        if sheet_name is None:
+            wb = load_workbook(os.path.join(path_check_file, fn_check_file))
+            for sh_n in wb.get_sheet_names():
+                if 'тест' in sh_n.lower():
+                    sheet_name = sh_n
+            if sheet_name is None: sheet_name = wb.get_sheet_names()[0]
+            df = pd.read_excel(os.path.join(path_check_file, fn_check_file), sheet_name=sheet_name, )
+        else:
+            df = pd.read_excel(os.path.join(path_check_file, fn_check_file), sheet_name=sheet_name, )
+        print(df.shape)
         if df.shape[1] == 1:
-            logger.info("Check file read: shape: " + str(df.shape) )
-            if not col_name in df.columns:
+            #logger.info("Check file read: shape: " + str(df.shape) )
+            logger.info("Проверяемый файл '{fn_check_file}': размерность: " + str(df.shape) )
+            if  col_name not in df.columns:
                 old_col_name = df.columns[0]
                 df.rename(columns = {old_col_name: col_name}, inplace=True)
-                logger.info(f"Check file: Column '{old_col_name}' renamed to '{col_name}'")
+                logger.info(f"Проверяемый файл '{fn_check_file}': Колонка '{old_col_name}' переименована в  '{col_name}'")
         elif col_name in df.columns:
             df = df[[col_name]]
-            logger.info("Check file read: shape: " + str(df.shape) )
+            #logger.info("Check file read: shape: " + str(df.shape) )
+            logger.info("Проверяемый файл '{fn_check_file}': размерность: " + str(df.shape) )
+            
         else:
-            logger.error(f"Check file: Not found need column: '{col_name}'")
+            # logger.error(f"Check file: Not found need column: '{col_name}'")
+            logger.error(f"Проверяемый файл '{fn_check_file}', лист '{sheet_name}': не найдена колонка: '{col_name}'")
             read_ok = False
     except Exception as err:
-        logger.error(f"Check file: {err}")
+        logger.error(f"Проверяемый файл '{fn_check_file}': {err}")
         read_ok = False
         # if f"Worksheet named '{sheet_name}' not found" in err:
 
@@ -434,27 +472,35 @@ def read_test_dictionary(path_dict_file, fn_dict_file, sheet_name, col_names):
     df = None
     read_ok = True
     try:
-        df = pd.read_excel(os.path.join(path_dict_file, fn_dict_file), sheet_name=sheet_name, )
+        if sheet_name is None:
+            wb = load_workbook(os.path.join(path_dict_file, fn_dict_file))
+            for sh_n in wb.get_sheet_names():
+                if 'справ' in sh_n.lower():
+                    sheet_name = sh_n
+            if sheet_name is None: sheet_name = wb.get_sheet_names()[0]
+            df = pd.read_excel(os.path.join(path_dict_file, fn_dict_file), sheet_name=sheet_name, )
+        else:
+            df = pd.read_excel(os.path.join(path_dict_file, fn_dict_file), sheet_name=sheet_name, )
         if df.shape[1] == 2:
             if set(col_names).issubset(df.columns):
-                logger.info("Dictionary file read: shape: " + str(df.shape) )
+                # logger.info("Dictionary file read: shape: " + str(df.shape) )
+                logger.info(f"Файл локального справочника '{fn_dict_file}' загружен: размерность: " + str(df.shape) )
                 # df.rename(columns = {df.columns[0]: col_name}, inplace=True)
             else:
-                logger.error(f"Dictionary file: Not found need columns: '{col_names}'")
+                # logger.error(f"Dictionary file: Not found need columns: '{col_names}'")
+                logger.error(f"Файл локального справочника '{fn_dict_file}': не найдены нужные колонки: '{col_names}'")
                 read_ok = False                
         elif set(col_names).issubset(df.columns):
             df = df[col_names]
-            logger.info("Dictionary file read: shape: " + str(df.shape) )
+            logger.info(f"Файл локального справочника '{fn_dict_file}' загружен: размерность: " + str(df.shape) )
         else:
-            logger.error(f"Dictionary file: Not found need columns: '{col_names}'")
+            logger.error(f"Файл локального справочника '{fn_dict_file}': не найдены нужные колонки: '{col_names}'")
             read_ok = False
     except Exception as err:
-        logger.error(f"Dictionary file: {err}")
+        logger.error(f"Файл локального справочника '{fn_dict_file}': {err}")
         read_ok = False
     return df, read_ok
 
-from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
 def fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf):
     def get_code_name(tuple_name_sim_lst, name_col_dict, code_col_dict, similarity_threshold):
         # name = dict_lst[id]
@@ -469,6 +515,7 @@ def fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_co
             else: break
         return np.array(rez)
 
+    
     dict_lst = df_dict[name_col_dict_local].unique()
     # dict_lst[:2]
     df_test[new_cols_fuzzy] = None
@@ -483,14 +530,6 @@ def fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_co
         if len(values)>0:
             df_test.loc[i_row, new_cols_fuzzy] = np_unique_nan(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2]) 
     return df_test
-
-from openpyxl import load_workbook
-from openpyxl import Workbook
-from openpyxl.comments import Comment
-from openpyxl.styles import colors
-from openpyxl.styles import Font, Color
-from openpyxl.utils import units
-from openpyxl.styles import Border, Side, PatternFill, GradientFill, Alignment
 
 new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
 new_cols_semantic = ['sim_semantic_1_local', 'code_semantic_1_local', 'name_semantic_1_local']
@@ -573,7 +612,7 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     str_date = dt.strftime("%Y_%m_%d_%H%M")
     fn = fn_main + '_' + str_date + '.xlsx'
     wb.save(os.path.join(data_processed_dir,fn))
-    logger.info("Файл статистикиЖ '{fn}' созранен в '{data_processed_dir}'")
+    logger.info(f"Файл статистики: '{fn}' созранен в '{data_processed_dir}'")
     return fn
 
 def lst_2_s(lst):
@@ -672,17 +711,22 @@ def def_form(fn_list):
     fn_dict_file_drop_douwn = widgets.Dropdown( options= [None] + fn_list, value= None, disabled=False, )
     radio_btn_big_dict = widgets.RadioButtons(options=['Да', 'Нет'], value= 'Да', disabled=False) # description='Check me',    , indent=False
     radio_btn_prod_options = widgets.RadioButtons(options=['Да', 'Нет'], value= 'Нет', disabled=False if radio_btn_big_dict.value=='Да' else True )
+    similarity_threshold_slider = widgets.IntSlider(min=1,max=100, value=90)
+    max_entries_slider = widgets.IntSlider(min=1,max=5, value=2)
 
     form_item_layout = Layout(display='flex', flex_flow='row', justify_content='space-between')
     check_box = Box([Label(value='Проверяемый файл:'), fn_check_file_drop_douwn], layout=form_item_layout) 
     dict_box = Box([Label(value='Файл справочника:'), fn_dict_file_drop_douwn], layout=form_item_layout) 
     big_dict_box = Box([Label(value='Использовать большие справочники:'), radio_btn_big_dict], layout=form_item_layout) 
     prod_options_box = Box([Label(value='Искать в Вариантах исполнения (+10 мин):'), radio_btn_prod_options], layout=form_item_layout) 
-    form_items = [check_box, dict_box, big_dict_box, prod_options_box]
+    similarity_threshold_box = Box([Label(value='Минимальный % сходства позиций:'), similarity_threshold_slider], layout=form_item_layout) 
+    max_entries_box = Box([Label(value='Максимальное кол-во найденных уникальных позиций , %:'), max_entries_slider], layout=form_item_layout) 
+    
+    form_items = [check_box, dict_box, big_dict_box, prod_options_box, similarity_threshold_box, max_entries_box]
     
     form = Box(form_items, layout=Layout(display='flex', flex_flow= 'column', border='solid 2px', align_items='stretch', width='50%')) #width='auto'))
-    return form, fn_check_file_drop_douwn, fn_dict_file_drop_douwn, radio_btn_big_dict, radio_btn_prod_options
-    # form = Box(form_items, layout=Layout(display='flex', flex_flow= 'column', border='solid 2px', align_items='stretch', width='50%')) #width='auto'))
+    return form, fn_check_file_drop_douwn, fn_dict_file_drop_douwn, radio_btn_big_dict, radio_btn_prod_options, similarity_threshold_slider, max_entries_slider
+    # form = Box(form_items, layout=Layout(display='flex', flex_flow= 'column', border='solid 2px', align_items='stretch', width='70%')) #width='auto'))
 def on_big_dict_value_change(change):
     global radio_btn_prod_options
     if change.new == 'Да':
@@ -691,3 +735,118 @@ def on_big_dict_value_change(change):
     else:
         radio_btn_prod_options.disabled = True 
         radio_btn_prod_options.value = 'Нет'     
+
+
+def mi_search( data_source_dir, data_processed_dir,
+              fn_check_file, sheet_name_check, col_name_check,
+              fn_dict_file, sheet_name_dict, name_col_dict_local, code_col_dict_local,
+              similarity_threshold = 0.9,
+              max_sim_entries=2,
+              by_big_dict = False,
+              by_prod_options = False,
+              debug=False
+):
+    
+    if fn_dict_file is None and not by_big_dict:
+        by_big_dict = True
+    test_ok = test_inputs(data_source_dir, 
+              fn_check_file, sheet_name_check, col_name_check,
+              fn_dict_file, sheet_name_dict, [name_col_dict_local, code_col_dict_local], by_big_dict,
+              )
+    if not test_ok:
+        # logger.error(f"Error of input params - Program is over")
+        logger.error(f"Ошибка входных параметров - Работа программы завершена")
+        sys.exit(2)
+    
+    df_test, read_ok_check = read_check_file(data_source_dir, fn_check_file, sheet_name_check, col_name_check)
+    if read_ok_check: display(df_test.head(2))
+    if fn_dict_file is not None:
+        df_dict, read_ok_dict = df_dict, read_ok_dict = read_test_dictionary(data_source_dir, fn_dict_file, sheet_name_dict, [name_col_dict_local, code_col_dict_local]) #col_names_dict) 
+        if read_ok_dict: display(df_dict.head(2))
+        else: print(type(df_dict))
+    else: read_ok_dict = True
+    if not read_ok_check or (not read_ok_dict and not semantic_search):
+        # logger.error(f"Error of input data - Program is over")
+        logger.error(f"Ошибка в листах или колонках проверяемого файла - Работа программы завершена")
+        sys.exit(2)
+    
+    new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
+    if fn_dict_file is not None and df_dict is not None:
+        logger.info("Fuzzy search on local dictionary - start...")
+        df_test = fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, 
+                                new_cols_fuzzy, similarity_threshold, max_sim_entries) #, n_rows=2)
+            # fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf)
+        display(df_test.head(2))
+    
+    
+    model = load_sentence_model()
+
+    if fn_dict_file is not None:
+        new_cols_semantic = ['sim_semantic_1_local', 'code_semantic_1_local', 'name_semantic_1_local']
+        dict_local_unique = df_dict[name_col_dict_local].unique()
+        option_col_dict_local = None
+        logger.info("Semantic search on local dictionary - start...")
+        dict_embedding_local = model.encode(dict_local_unique, show_progress_bar=True)
+        df_test = semantic_search (df_test, col_name_check, 
+                     dict_local_unique, df_dict, name_col_dict_local, code_col_dict_local,
+                     option_col_dict_local, 
+                     model, dict_embedding_local, 
+                     new_cols_semantic, 
+                     similarity_threshold, max_sim_entries) #, n_rows=2)
+        display(df_test.head(2))
+    if by_big_dict:
+        test_ok = test_big_dictionaries(df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options)
+        if not test_ok:
+           logger.error(f"Работа программы завершена")
+           sys.exit(2)
+        new_cols_semantic_gos = ['sim_semantic_2_gos', 'code_semantic_2_gos', 'name_semantic_2_gos']
+        name_col_dict_gos, code_col_dict_gos = 'name_clean', 'kind'
+        option_col_dict_gos = None
+        logger.info("Semantic search on gos dictionary - start...")
+        dict_gos_unique = df_mi_org_gos[name_col_dict_gos].unique()
+        # dict_embedding_gos = model.encode(dict_gos_unique, show_progress_bar=True)
+        df_test = semantic_search (df_test, col_name_check, 
+                     dict_gos_unique, df_mi_org_gos, name_col_dict_gos, code_col_dict_gos,
+                     option_col_dict_gos,
+                     model, dict_embedding_gos_multy, 
+                     new_cols_semantic_gos, 
+                     similarity_threshold, max_sim_entries) #, n_rows=2)
+        display(df_test.head(2))
+
+        new_cols_semantic_national = ['sim_semantic_3_national', 'code_semantic_3_national', 'name_semantic_3_national']
+        name_col_dict_national, code_col_dict_national = 'name', 'code'
+        option_col_dict_national = None
+        logger.info("Semantic search on national dictionary - start...")
+        dict_national_unique = df_mi_national[name_col_dict_national].unique()
+        # dict_embedding_gos = model.encode(dict_gos_unique, show_progress_bar=True)
+        df_test = semantic_search (df_test, col_name_check, 
+                     dict_national_unique, df_mi_national, name_col_dict_national, code_col_dict_national,
+                     option_col_dict_national,
+                     model, dict_embedding_national_multy, # dict_embedding_gos_prod_options_multy, #
+                     new_cols_semantic_national, 
+                     similarity_threshold, max_sim_entries) #, n_rows=2)
+        display(df_test.head(2))
+        
+        if by_prod_options:
+            new_cols_semantic_gos_options = ['sim_semantic_4_gos_option', 'option_semantic_4_gos_option', 'code_semantic_4_gos_option', 'name_semantic_4_gos_option']
+            name_col_dict_gos_option, code_col_dict_gos_option, option_col_dict_gos_option = 'name_clean', 'kind', 'option'
+            logger.info("Semantic search on options in gos dictionary - start...")
+            dict_gos_options_unique = df_mi_org_gos_prod_options[option_col_dict_gos_option].unique()
+            dict_gos_options_unique = dict_lst_gos_prod_options
+            # 'name_clean', 'kind', 'i_option', 'option'
+            df_test = semantic_search (df_test, col_name_check, 
+                        dict_gos_options_unique, df_mi_org_gos_prod_options, 
+                        name_col_dict_gos_option, code_col_dict_gos_option, option_col_dict_gos_option,
+                        model, 
+                        dict_embedding_gos_prod_options_multy, 
+                        new_cols_semantic_gos_options, 
+                        similarity_threshold, max_sim_entries) #,n_rows=12, debug= debug
+            display(df_test.head(2))
+      # dict_embedding_gos_prod_options_multy
+        
+    fn_main = fn_check_file.split('.xlsx')[0] + '_processed'
+    fn_save = save_df_to_excel(df_test, data_processed_dir, fn_main)
+    fn_save_stat = save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold)
+    
+    return df_test
+
