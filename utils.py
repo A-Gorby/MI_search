@@ -446,16 +446,16 @@ def read_check_file(path_check_file, fn_check_file, sheet_name, col_name= 'На�
             df = pd.read_excel(os.path.join(path_check_file, fn_check_file), sheet_name=sheet_name, )
         print(df.shape)
         if df.shape[1] == 1:
-            #logger.info("Check file read: shape: " + str(df.shape) )
-            logger.info("Проверяемый файл '{fn_check_file}': размерность: " + str(df.shape) )
+            #logger.info(f"Check file read: shape: " + str(df.shape) )
+            logger.info(f"Проверяемый файл '{fn_check_file}': размерность: " + str(df.shape) )
             if  col_name not in df.columns:
                 old_col_name = df.columns[0]
                 df.rename(columns = {old_col_name: col_name}, inplace=True)
                 logger.info(f"Проверяемый файл '{fn_check_file}': Колонка '{old_col_name}' переименована в  '{col_name}'")
         elif col_name in df.columns:
             df = df[[col_name]]
-            #logger.info("Check file read: shape: " + str(df.shape) )
-            logger.info("Проверяемый файл '{fn_check_file}': размерность: " + str(df.shape) )
+            #logger.info(f"Check file read: shape: " + str(df.shape) )
+            logger.info(f"Проверяемый файл '{fn_check_file}': размерность: " + str(df.shape) )
             
         else:
             # logger.error(f"Check file: Not found need column: '{col_name}'")
@@ -485,7 +485,7 @@ def read_test_dictionary(path_dict_file, fn_dict_file, sheet_name, col_names):
             df = pd.read_excel(os.path.join(path_dict_file, fn_dict_file), sheet_name=sheet_name, )
         if df.shape[1] == 2:
             if set(col_names).issubset(df.columns):
-                # logger.info("Dictionary file read: shape: " + str(df.shape) )
+                # logger.info(f"Dictionary file read: shape: " + str(df.shape) )
                 logger.info(f"Файл локального справочника '{fn_dict_file}' загружен: размерность: " + str(df.shape) )
                 # df.rename(columns = {df.columns[0]: col_name}, inplace=True)
             else:
@@ -543,42 +543,57 @@ new_cols_semantic_national = ['sim_semantic_3_national', 'code_semantic_3_nation
 new_cols_semantic_gos_options = ['sim_semantic_4_gos_option', 'option_semantic_4_gos_option', 'code_semantic_4_gos_option', 'name_semantic_4_gos_option']
 # similarity_threshold = .8
 # max_sim_entries = 2
+
 def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold):
     nums_lst = []
     total_num_recs = df_test.shape[0]
     nums_lst.append(['total_num_recs', total_num_recs])
+    mask_cols = ['total_num_recs']
     try:
         num_found_rec_fuzzy = df_test[df_test['sim_fuzzy_name'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_fuzzy', num_found_rec_fuzzy])
+        mask_cols.append('sim_fuzzy_name')
     except:
         num_found_rec_fuzzy = None
     try:
         num_found_rec_semantic_1_local = df_test[df_test['name_semantic_1_local'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_1_local', num_found_rec_semantic_1_local])
+        mask_cols.append('num_found_rec_semantic_1_local')
     except:
         num_found_rec_semantic_1_local = None
     # print(f"num_found_rec_semantic_1_local: {num_found_rec_semantic_1_local}")
     try:
         num_found_rec_semantic_2_gos = df_test[df_test['name_semantic_2_gos'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_2_gos', num_found_rec_semantic_2_gos])
+        mask_cols.append('num_found_rec_semantic_2_gos')
     except:
         num_found_rec_semantic_2_gos = None
     try:
         num_found_rec_semantic_3_national = df_test[df_test['name_semantic_3_national'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_3_national', num_found_rec_semantic_3_national])
+        mask_cols.append('num_found_rec_semantic_3_national')
     except:
         num_found_rec_semantic_3_national = None
     try:
         num_found_rec_semantic_4_gos_option = df_test[df_test['option_semantic_4_gos_option'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_4_gos_option', num_found_rec_semantic_4_gos_option])
+        mask_cols.append('num_found_rec_semantic_4_gos_option')
     except:
         num_found_rec_semantic_4_gos_option = None
+    for ic, col in enumerate(mask_cols):
+        if ic == 0:
+            mask_not_found = df_test[col].isnull()
+        else: mask_not_found = mask_not_found & df_test[col].isnull()
+    num_found_rec_total = df_test[~mask_not_found].shape[0]
+    nums_lst.append(['num_found_rec_total', num_found_rec_total])
+
     print(f"total_num_recs: {total_num_recs}",
           f"\nnum_found_rec_fuzzy: {num_found_rec_fuzzy}" if num_found_rec_fuzzy is not None else '',
           f"\nnum_found_rec_semantic_1_local: {num_found_rec_semantic_1_local}" if num_found_rec_semantic_1_local is not None else '',
           f"\nnum_found_rec_semantic_2_gos: {num_found_rec_semantic_2_gos}" if num_found_rec_semantic_2_gos is not None else '', 
           f"\nnum_found_rec_semantic_3_national: {num_found_rec_semantic_3_national}" if num_found_rec_semantic_3_national is not None else '',
           f"\nnum_found_rec_semantic_4_gos_option: {num_found_rec_semantic_4_gos_option}" if num_found_rec_semantic_4_gos_option is not None else '',
+          f"\nnum_found_rec_total: {num_found_rec_total}",
           '')
     
     wb = Workbook()
