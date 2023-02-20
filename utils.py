@@ -461,9 +461,11 @@ def read_check_file(path_check_file, fn_check_file, sheet_name, col_name= 'На�
             # logger.error(f"Check file: Not found need column: '{col_name}'")
             logger.error(f"Проверяемый файл '{fn_check_file}', лист '{sheet_name}': не найдена колонка: '{col_name}'")
             read_ok = False
+            df = None
     except Exception as err:
         logger.error(f"Проверяемый файл '{fn_check_file}': {err}")
         read_ok = False
+        df = None
         # if f"Worksheet named '{sheet_name}' not found" in err:
 
     return df, read_ok
@@ -489,16 +491,19 @@ def read_test_dictionary(path_dict_file, fn_dict_file, sheet_name, col_names):
             else:
                 # logger.error(f"Dictionary file: Not found need columns: '{col_names}'")
                 logger.error(f"Файл локального справочника '{fn_dict_file}': не найдены нужные колонки: '{col_names}'")
-                read_ok = False                
+                read_ok = False
+                df = None
         elif set(col_names).issubset(df.columns):
             df = df[col_names]
             logger.info(f"Файл локального справочника '{fn_dict_file}' загружен: размерность: " + str(df.shape) )
         else:
             logger.error(f"Файл локального справочника '{fn_dict_file}': не найдены нужные колонки: '{col_names}'")
             read_ok = False
+            df = None
     except Exception as err:
         logger.error(f"Файл локального справочника '{fn_dict_file}': {err}")
         read_ok = False
+        df = None
     return df, read_ok
 
 def fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf):
@@ -781,7 +786,7 @@ def mi_search( data_source_dir, data_processed_dir,
     
     model = load_sentence_model()
 
-    if fn_dict_file is not None:
+    if fn_dict_file is not None and df_dict is not None:
         new_cols_semantic = ['sim_semantic_1_local', 'code_semantic_1_local', 'name_semantic_1_local']
         dict_local_unique = df_dict[name_col_dict_local].unique()
         option_col_dict_local = None
