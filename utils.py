@@ -742,6 +742,7 @@ def on_big_dict_value_change(change):
         radio_btn_prod_options.value = 'Нет'     
 
 df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = None, None, None, None, None, None, None
+
 def mi_search( data_source_dir, data_processed_dir,
               fn_check_file, sheet_name_check, col_name_check,
               fn_dict_file, sheet_name_dict, name_col_dict_local, code_col_dict_local,
@@ -752,10 +753,10 @@ def mi_search( data_source_dir, data_processed_dir,
               df_dicts = [],
               debug=False
 ):
-    if 'data_source_dir' not in locals()  or 'data_processed_dir' not in locals():
-        logger.error(F"Переменные data_source_dir' и'data_processed_dir' не определены")
-        logger.info(F"Перезапустите п.3. Create Data Direcoties")
-        sys.exit(2)
+    # if 'data_source_dir' not in locals()  or 'data_processed_dir' not in locals():
+    #     logger.error(F"Переменные data_source_dir' и'data_processed_dir' не определены")
+    #     logger.info(F"Перезапустите п.3. Create Data Direcoties")
+    #     sys.exit(2)
     
     if fn_dict_file is None and not by_big_dict:
         by_big_dict = True
@@ -780,9 +781,12 @@ def mi_search( data_source_dir, data_processed_dir,
         logger.error(f"Ошибка в листах или колонках проверяемого файла - Работа программы завершена")
         sys.exit(2)
     
+    format_cols
     new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
+    format_cols = [10,15, 60]
     if fn_dict_file is not None and df_dict is not None:
-        logger.info("Fuzzy search on local dictionary - start...")
+        # logger.info("Fuzzy search on local dictionary - start...")
+        logger.info("Нечеткий (Fuzzy) поиск по локальному справочнику - Старт...")
         df_test = fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, 
                                 new_cols_fuzzy, similarity_threshold, max_sim_entries) #, n_rows=2)
             # fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf)
@@ -792,10 +796,12 @@ def mi_search( data_source_dir, data_processed_dir,
     model = load_sentence_model()
 
     if fn_dict_file is not None and df_dict is not None:
+        format_cols.extend([10,15, 60])
         new_cols_semantic = ['sim_semantic_1_local', 'code_semantic_1_local', 'name_semantic_1_local']
         dict_local_unique = df_dict[name_col_dict_local].unique()
         option_col_dict_local = None
-        logger.info("Semantic search on local dictionary - start...")
+        # logger.info("Semantic search on local dictionary - start...")
+        logger.info("Сематнтический поиск по локальному справочнику - Старт..." )
         dict_embedding_local = model.encode(dict_local_unique, show_progress_bar=True)
         df_test = semantic_search (df_test, col_name_check, 
                      dict_local_unique, df_dict, name_col_dict_local, code_col_dict_local,
@@ -818,10 +824,12 @@ def mi_search( data_source_dir, data_processed_dir,
             #print(dict_lst_gos_prod_options.shape)
             pass
     
+        format_cols.extend([10,15, 60])
         new_cols_semantic_gos = ['sim_semantic_2_gos', 'code_semantic_2_gos', 'name_semantic_2_gos']
         name_col_dict_gos, code_col_dict_gos = 'name_clean', 'kind'
         option_col_dict_gos = None
-        logger.info("Semantic search on gos dictionary - start...")
+        # logger.info("Semantic search on gos dictionary - start...")
+        logger.info("Сематнтический поиск по гос реестру МИ - Старт..." )
         dict_gos_unique = df_mi_org_gos[name_col_dict_gos].unique()
         # dict_embedding_gos = model.encode(dict_gos_unique, show_progress_bar=True)
         df_test = semantic_search (df_test, col_name_check, 
@@ -832,10 +840,12 @@ def mi_search( data_source_dir, data_processed_dir,
                      similarity_threshold, max_sim_entries) #, n_rows=2)
         display(df_test.head(2))
 
+        format_cols.extend([10,15, 60])
         new_cols_semantic_national = ['sim_semantic_3_national', 'code_semantic_3_national', 'name_semantic_3_national']
         name_col_dict_national, code_col_dict_national = 'name', 'code'
         option_col_dict_national = None
-        logger.info("Semantic search on national dictionary - start...")
+        # logger.info("Semantic search on national dictionary - start...")
+        logger.info("Сематнтический поиск по реестру МИ по национальнмоу законодательству - Старт..." )
         dict_national_unique = df_mi_national[name_col_dict_national].unique()
         # dict_embedding_gos = model.encode(dict_gos_unique, show_progress_bar=True)
         df_test = semantic_search (df_test, col_name_check, 
@@ -847,9 +857,11 @@ def mi_search( data_source_dir, data_processed_dir,
         display(df_test.head(2))
         
         if by_prod_options:
+            format_cols.extend([60, 10,15, 60])
             new_cols_semantic_gos_options = ['sim_semantic_4_gos_option', 'option_semantic_4_gos_option', 'code_semantic_4_gos_option', 'name_semantic_4_gos_option']
             name_col_dict_gos_option, code_col_dict_gos_option, option_col_dict_gos_option = 'name_clean', 'kind', 'option'
-            logger.info("Semantic search on options in gos dictionary - start...")
+            # logger.info("Semantic search on options in gos dictionary - start...")
+            logger.info("Сематнтический поиск по Вариантам исполнения из гос реестра МИ - Старт..." )
             dict_gos_options_unique = df_mi_org_gos_prod_options[option_col_dict_gos_option].unique()
             dict_gos_options_unique = dict_lst_gos_prod_options
             # 'name_clean', 'kind', 'i_option', 'option'
@@ -865,7 +877,25 @@ def mi_search( data_source_dir, data_processed_dir,
         
     fn_main = fn_check_file.split('.xlsx')[0] + '_processed'
     fn_save = save_df_to_excel(df_test, data_processed_dir, fn_main)
+    format_excel_cols(data_processed_dir, fn_save, format_cols)
     fn_save_stat = save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold)
     
     return df_test
 
+def format_excel_cols(data_processed_dir, fn_xls, format_cols):
+    wb = load_workbook(os.path.join(data_processed_dir, fn_xls))
+    ws = wb.active
+    l_alignment=Alignment(horizontal='left', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
+    r_alignment=Alignment(horizontal='right', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
+    
+    # ws.filterMode = True
+    last_cell = ws.cell(row=1, column=len(format_cols)) 
+    full_range = "A1:" + last_cell.column_letter + str(ws.max_row)
+    ws.auto_filter.ref = full_range
+    ws.freeze_panes = ws['B2']
+    for ic, col_width in enumerate(format_cols):
+        cell = ws.cell(row=1, column=ic+1)
+        cell.alignment = l_alignment
+        
+        ws.column_dimensions[cell.column_letter].width = col_width
+    wb.save(os.path.join(data_processed_dir, fn_xls))
