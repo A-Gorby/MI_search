@@ -548,11 +548,13 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     nums_lst = []
     total_num_recs = df_test.shape[0]
     nums_lst.append(['total_num_recs', total_num_recs])
-    mask_cols = [df_test.columns[0]]
+    #mask_cols = [df_test.columns[0]]
+    mask_cols = []
     try:
         num_found_rec_fuzzy = df_test[df_test['sim_fuzzy_name'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_fuzzy', num_found_rec_fuzzy])
         mask_cols.append('sim_fuzzy_name')
+        #mask_cols= ['sim_fuzzy_name']
     except:
         num_found_rec_fuzzy = None
     try:
