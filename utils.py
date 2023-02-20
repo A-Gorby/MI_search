@@ -548,7 +548,7 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     nums_lst = []
     total_num_recs = df_test.shape[0]
     nums_lst.append(['total_num_recs', total_num_recs])
-    mask_cols = ['total_num_recs']
+    mask_cols = [df_test.columns[0]]
     try:
         num_found_rec_fuzzy = df_test[df_test['sim_fuzzy_name'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_fuzzy', num_found_rec_fuzzy])
@@ -558,26 +558,26 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     try:
         num_found_rec_semantic_1_local = df_test[df_test['name_semantic_1_local'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_1_local', num_found_rec_semantic_1_local])
-        mask_cols.append('num_found_rec_semantic_1_local')
+        mask_cols.append('name_semantic_1_local')
     except:
         num_found_rec_semantic_1_local = None
     # print(f"num_found_rec_semantic_1_local: {num_found_rec_semantic_1_local}")
     try:
         num_found_rec_semantic_2_gos = df_test[df_test['name_semantic_2_gos'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_2_gos', num_found_rec_semantic_2_gos])
-        mask_cols.append('num_found_rec_semantic_2_gos')
+        mask_cols.append('name_semantic_2_gos')
     except:
         num_found_rec_semantic_2_gos = None
     try:
         num_found_rec_semantic_3_national = df_test[df_test['name_semantic_3_national'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_3_national', num_found_rec_semantic_3_national])
-        mask_cols.append('num_found_rec_semantic_3_national')
+        mask_cols.append('name_semantic_3_national')
     except:
         num_found_rec_semantic_3_national = None
     try:
         num_found_rec_semantic_4_gos_option = df_test[df_test['option_semantic_4_gos_option'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_semantic_4_gos_option', num_found_rec_semantic_4_gos_option])
-        mask_cols.append('num_found_rec_semantic_4_gos_option')
+        mask_cols.append('option_semantic_4_gos_option')
     except:
         num_found_rec_semantic_4_gos_option = None
     for ic, col in enumerate(mask_cols):
@@ -719,9 +719,11 @@ def semantic_search (df_test, col_name_check,
     return df_test
 
 def load_sentence_model():
-    logger.info(f"MultyLangual model dounlowd - start...")
+    # logger.info(f"MultyLangual model dounlowd - start...")
+    logger.info(f"Загрузка предобученной нейросети - Старт...")
     model = SentenceTransformer('multi-qa-MiniLM-L6-cos-v1')
-    logger.info(f"MultyLangual model dounlowd - done!")
+    # logger.info(f"MultyLangual model dounlowd - done!")
+    logger.info(f"Загрузка предобученной нейросети - Финиш!")
     return model
 
 fn_list = []
