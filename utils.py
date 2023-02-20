@@ -752,6 +752,11 @@ def mi_search( data_source_dir, data_processed_dir,
               df_dicts = [],
               debug=False
 ):
+    if 'data_source_dir' not in locals()  or 'data_processed_dir' not in locals():
+        logger.error(F"Переменные data_source_dir' и'data_processed_dir' не определены")
+        logger.info(F"Перезапустите п.3. Create Data Direcoties")
+        sys.exit(2)
+    
     if fn_dict_file is None and not by_big_dict:
         by_big_dict = True
     test_ok = test_inputs(data_source_dir, 
