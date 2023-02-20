@@ -781,9 +781,9 @@ def mi_search( data_source_dir, data_processed_dir,
         logger.error(f"Ошибка в листах или колонках проверяемого файла - Работа программы завершена")
         sys.exit(2)
     
-    format_cols
+    format_cols = [60]
     new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
-    format_cols = [10,15, 60]
+    format_cols.extend([10, 15, 60])
     if fn_dict_file is not None and df_dict is not None:
         # logger.info("Fuzzy search on local dictionary - start...")
         logger.info("Нечеткий (Fuzzy) поиск по локальному справочнику - Старт...")
