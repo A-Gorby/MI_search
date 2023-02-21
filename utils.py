@@ -431,7 +431,7 @@ def test_inputs(data_source_dir,
             logger.error(f"Файл справочника '{fn_dict_file}' не найден")
     return test_ok
 
-def read_check_file(path_check_file, fn_check_file, sheet_name, col_name= 'Наименование МИ/РМ'):
+def read_check_file(path_check_file, fn_check_file, sheet_name, col_name= 'Наименование МИ/РМ', debug=False):
     df = None
     read_ok = True
     try:
@@ -444,7 +444,9 @@ def read_check_file(path_check_file, fn_check_file, sheet_name, col_name= 'На�
             df = pd.read_excel(os.path.join(path_check_file, fn_check_file), sheet_name=sheet_name, )
         else:
             df = pd.read_excel(os.path.join(path_check_file, fn_check_file), sheet_name=sheet_name, )
-        print(df.shape)
+        if debug: 
+            print("read_check_file:", df.shape, df.columns)
+            print(col_name, "col_name in df.columns:", col_name in df.columns)
         if df.shape[1] == 1:
             #logger.info(f"Check file read: shape: " + str(df.shape) )
             logger.info(f"Проверяемый файл '{fn_check_file}': размерность: " + str(df.shape) )
@@ -548,13 +550,12 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     nums_lst = []
     total_num_recs = df_test.shape[0]
     nums_lst.append(['total_num_recs', total_num_recs])
-    #mask_cols = [df_test.columns[0]]
+    # mask_cols = [df_test.columns[0]]
     mask_cols = []
     try:
         num_found_rec_fuzzy = df_test[df_test['sim_fuzzy_name'].notnull()].shape[0]
         nums_lst.append(['num_found_rec_fuzzy', num_found_rec_fuzzy])
         mask_cols.append('sim_fuzzy_name')
-        #mask_cols= ['sim_fuzzy_name']
     except:
         num_found_rec_fuzzy = None
     try:
