@@ -631,7 +631,7 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     ws.column_dimensions[cell.column_letter].width = 10
 
     # ws['A2'], ws['B2'] = 'similarity_threshold, %', similarity_threshold
-    ws['A1'], ws['B1'] = '% Сходства', similarity_threshold
+    ws['A1'], ws['B1'] = 'Минимальный % сходства', similarity_threshold
     ws["B1"].number_format = "0%"
     # ws['A1'], ws['B1'] = 'max_sim_entries', max_sim_entries
     ws['A2'], ws['B2'] = 'Максимальное количество уникальных наименований', max_sim_entries
