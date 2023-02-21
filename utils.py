@@ -52,6 +52,7 @@ class Logger():
                  strfmt = '[%(asctime)s] [%(levelname)s] > %(message)s', # strfmt = '[%(asctime)s] [%(name)s] [%(levelname)s] > %(message)s'
                  level = logging.INFO,
                  datefmt = '%H:%M:%S', # '%Y-%m-%d %H:%M:%S'
+                #  datefmt = '%H:%M:%S %p %Z',
 
                  ):
         self.name = name
@@ -60,22 +61,20 @@ class Logger():
         self.datefmt = datefmt
         self.logger = logging.getLogger(name)
         self.logger.setLevel(self.level) #logging.INFO)
-        # self.logger.setLevel(logging.NOTSET) #logging.INFO)
+        self.offset = datetime.timezone(datetime.timedelta(hours=3))
         # create console handler and set level to debug
         self.ch = logging.StreamHandler()
         self.ch.setLevel(self.level)
         # create formatter
         self.strfmt = strfmt # '[%(asctime)s] [%(levelname)s] > %(message)s'
-        strfmt = '%(asctime)s - %(levelname)s > %(message)s'
-        # строка формата времени
-        #datefmt = '%Y-%m-%d %H:%M:%S'
         self.datefmt = datefmt # '%H:%M:%S'
         # создаем форматтер
         self.formatter = logging.Formatter(fmt=strfmt, datefmt=datefmt)
-        # add formatter to ch
+        self.formatter.converter = lambda *args: datetime.datetime.now(self.offset).timetuple()
         self.ch.setFormatter(self.formatter)
         # add ch to logger
         self.logger.addHandler(self.ch)
+
 logger = Logger().logger
 logger.propagate = False
 
@@ -597,13 +596,13 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     # nums_lst.append(['num_found_rec_total', num_found_rec_total])
     nums_lst.append(['Всего найдено записей', num_found_rec_total])
 
-    print(f"total_num_recs: {total_num_recs}",
-          f"\nnum_found_rec_fuzzy: {num_found_rec_fuzzy}" if num_found_rec_fuzzy is not None else '',
-          f"\nnum_found_rec_semantic_1_local: {num_found_rec_semantic_1_local}" if num_found_rec_semantic_1_local is not None else '',
-          f"\nnum_found_rec_semantic_2_gos: {num_found_rec_semantic_2_gos}" if num_found_rec_semantic_2_gos is not None else '', 
-          f"\nnum_found_rec_semantic_3_national: {num_found_rec_semantic_3_national}" if num_found_rec_semantic_3_national is not None else '',
-          f"\nnum_found_rec_semantic_4_gos_option: {num_found_rec_semantic_4_gos_option}" if num_found_rec_semantic_4_gos_option is not None else '',
-          f"\nnum_found_rec_total: {num_found_rec_total}",
+    print(f"Общее количество записей в наборе: {total_num_recs}",
+          f"\nНайдено записей по fuzzy поиску: {num_found_rec_fuzzy}" if num_found_rec_fuzzy is not None else '',
+          f"\nНайдено записей по семантическому поиску по локальному справочнику: {num_found_rec_semantic_1_local}" if num_found_rec_semantic_1_local is not None else '',
+          f"\nНайдено записей по семантическому поиску по гос реестру МИ: {num_found_rec_semantic_2_gos}" if num_found_rec_semantic_2_gos is not None else '', 
+          f"\nНайдено записей по семантическому поиску по национальному реестру МИ: {num_found_rec_semantic_3_national}" if num_found_rec_semantic_3_national is not None else '',
+          f"\nНайдено записей по семантическому поиску по Вариантам исполнения гос реестра МИ: {num_found_rec_semantic_4_gos_option}" if num_found_rec_semantic_4_gos_option is not None else '',
+          f"\nВсего найдено записей: {num_found_rec_total}",
           '')
     
     wb = Workbook()
@@ -631,8 +630,11 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     cell.alignment = alignment
     ws.column_dimensions[cell.column_letter].width = 10
 
-    ws['A1'], ws['B1'] = 'max_sim_entries', max_sim_entries
-    ws['A2'], ws['B2'] = 'similarity_threshold, %', similarity_threshold
+    # ws['A2'], ws['B2'] = 'similarity_threshold, %', similarity_threshold
+    ws['A1'], ws['B1'] = '% Сходства, %', similarity_threshold
+    # ws['A1'], ws['B1'] = 'max_sim_entries', max_sim_entries
+    ws['A2'], ws['B2'] = 'Максимальное количество уникальных наименований', max_sim_entries
+    
     ws["B2"].number_format = "0%"
     for lst in nums_lst:
         ws.append(lst)
