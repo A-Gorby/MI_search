@@ -549,37 +549,43 @@ new_cols_semantic_gos_options = ['sim_semantic_4_gos_option', 'option_semantic_4
 def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold):
     nums_lst = []
     total_num_recs = df_test.shape[0]
-    nums_lst.append(['total_num_recs', total_num_recs])
+    # nums_lst.append(['total_num_recs', total_num_recs])
+    nums_lst.append(['Общее количество записей в наборе', total_num_recs])
     # mask_cols = [df_test.columns[0]]
     mask_cols = []
     try:
         num_found_rec_fuzzy = df_test[df_test['sim_fuzzy_name'].notnull()].shape[0]
-        nums_lst.append(['num_found_rec_fuzzy', num_found_rec_fuzzy])
+        # nums_lst.append(['num_found_rec_fuzzy', num_found_rec_fuzzy])
+        nums_lst.append(['Найдено записей по fuzzy поиску', num_found_rec_fuzzy])
         mask_cols.append('sim_fuzzy_name')
     except:
         num_found_rec_fuzzy = None
     try:
         num_found_rec_semantic_1_local = df_test[df_test['name_semantic_1_local'].notnull()].shape[0]
-        nums_lst.append(['num_found_rec_semantic_1_local', num_found_rec_semantic_1_local])
+        # nums_lst.append(['num_found_rec_semantic_1_local', num_found_rec_semantic_1_local])
+        nums_lst.append(['Найдено записей по семантическому поиску по локальному справочнику', num_found_rec_semantic_1_local])
         mask_cols.append('name_semantic_1_local')
     except:
         num_found_rec_semantic_1_local = None
     # print(f"num_found_rec_semantic_1_local: {num_found_rec_semantic_1_local}")
     try:
         num_found_rec_semantic_2_gos = df_test[df_test['name_semantic_2_gos'].notnull()].shape[0]
-        nums_lst.append(['num_found_rec_semantic_2_gos', num_found_rec_semantic_2_gos])
+        # nums_lst.append(['num_found_rec_semantic_2_gos', num_found_rec_semantic_2_gos])
+        nums_lst.append(['Найдено записей по семантическому поиску по гос реестру МИ', num_found_rec_semantic_2_gos])
         mask_cols.append('name_semantic_2_gos')
     except:
         num_found_rec_semantic_2_gos = None
     try:
         num_found_rec_semantic_3_national = df_test[df_test['name_semantic_3_national'].notnull()].shape[0]
-        nums_lst.append(['num_found_rec_semantic_3_national', num_found_rec_semantic_3_national])
+        # nums_lst.append(['num_found_rec_semantic_3_national', num_found_rec_semantic_3_national])
+        nums_lst.append(['Найдено записей по семантическому поиску по национальному реестру МИ', num_found_rec_semantic_3_national])
         mask_cols.append('name_semantic_3_national')
     except:
         num_found_rec_semantic_3_national = None
     try:
         num_found_rec_semantic_4_gos_option = df_test[df_test['option_semantic_4_gos_option'].notnull()].shape[0]
-        nums_lst.append(['num_found_rec_semantic_4_gos_option', num_found_rec_semantic_4_gos_option])
+        # nums_lst.append(['num_found_rec_semantic_4_gos_option', num_found_rec_semantic_4_gos_option])
+        nums_lst.append(['Найдено записей по семантическому поиску по Вариантам исполнения гос реестра МИ', num_found_rec_semantic_2_gos])
         mask_cols.append('option_semantic_4_gos_option')
     except:
         num_found_rec_semantic_4_gos_option = None
@@ -588,7 +594,8 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
             mask_not_found = df_test[col].isnull()
         else: mask_not_found = mask_not_found & df_test[col].isnull()
     num_found_rec_total = df_test[~mask_not_found].shape[0]
-    nums_lst.append(['num_found_rec_total', num_found_rec_total])
+    # nums_lst.append(['num_found_rec_total', num_found_rec_total])
+    nums_lst.append(['Всего найдено записей', num_found_rec_total])
 
     print(f"total_num_recs: {total_num_recs}",
           f"\nnum_found_rec_fuzzy: {num_found_rec_fuzzy}" if num_found_rec_fuzzy is not None else '',
@@ -638,12 +645,14 @@ def save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, simil
     logger.info(f"Файл статистики: '{fn}' созранен в '{data_processed_dir}'")
     return fn
 
+
 def lst_2_s(lst):
     if not (type(lst)==str) and ((type(lst)==list) or (type(lst)==np.ndarray)):
         if len(lst)==1: rez = lst[0]
         else: rez = lst
     else: rez = lst[0]
     return rez
+
 def semantic_search (df_test, col_name_check, 
                      dict_unique, df_dict, name_col_dict, code_col_dict,
                      option_col_dict,
