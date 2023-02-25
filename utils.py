@@ -1067,7 +1067,10 @@ def mi_search( data_source_dir, data_processed_dir,
                      similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
         for k,v in dict_test_f02.items():
-            dict_test_f02[k].update(dict_test_f02_tmp[k])
+            if dict_test_f02.get(k) is not None:
+                dict_test_f02[k].update(dict_test_f02_tmp.get(k))
+            else:
+                print("dict_test_f02.get(k) is None", k)
 
         format_cols.extend([10,15, 60])
         new_cols_semantic_national = ['sim_semantic_3_national', 'code_semantic_3_national', 'name_semantic_3_national']
@@ -1086,7 +1089,10 @@ def mi_search( data_source_dir, data_processed_dir,
                      similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
         for k,v in dict_test_f02.items():
-            dict_test_f02[k].update(dict_test_f02_tmp[k])
+            if dict_test_f02.get(k) is not None:
+                dict_test_f02[k].update(dict_test_f02_tmp.get(k))
+            else:
+                print("dict_test_f02.get(k) is None", k)
         
         if by_prod_options:
             format_cols.extend([60, 10,15, 60])
@@ -1107,7 +1113,10 @@ def mi_search( data_source_dir, data_processed_dir,
                         similarity_threshold, max_sim_entries, n_rows = n_rows) #, debug= debug
             display(df_test.head(2))
             for k,v in dict_test_f02.items():
-                dict_test_f02[k].update(dict_test_f02_tmp[k])
+                if dict_test_f02.get(k) is not None:
+                    dict_test_f02[k].update(dict_test_f02_tmp.get(k))
+                else:
+                    print("dict_test_f02.get(k) is None", k)
         else: 
             new_cols_semantic_gos_options = []
       # dict_embedding_gos_prod_options_multy
