@@ -750,6 +750,7 @@ def semantic_search (df_test, col_name_check,
                     df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2], values[:,3]
 
     return df_test
+
 def semantic_search_02 (df_test, col_name_check, 
                      dict_unique, df_dict, name_col_dict, code_col_dict,
                      option_col_dict,
@@ -800,19 +801,31 @@ def semantic_search_02 (df_test, col_name_check,
                 if float(score) >= similarity_threshold:
                     name = dict_unique[id]
                     if option_col_dict is None:
-                        values = df_dict[df_dict[name_col_dict]==name][[code_col_dict, name_col_dict]].values
+                        # values = df_dict[df_dict[name_col_dict]==name][[code_col_dict, name_col_dict]].values
+                        values = df_dict[df_dict[name_col_dict]==name][[code_col_dict, name_col_dict]].\
+                                  drop_duplicates(subset=[code_col_dict, name_col_dict]).values
                         try:
-                            rez.append(np.array([round(score*100), np_unique_nan(values[:,0]), np_unique_nan(values[:,1])], dtype=object))
+                            # rez.append(np.array([round(score*100), np_unique_nan(values[:,0]), np_unique_nan(values[:,1])], dtype=object))
+                            rez.append(np.array([round(score*100), lst_2_s(values[:,0]), lst_2_s(values[:,1])], dtype=object))
                         except Exception as err:
-                            if debug: print("get_code_name: ", err, values.shape, values)
-                            rez.append(np.array([round(score*100), values[:,0], values[:,1]], dtype=object))
+                            rez.append(np.array([round(score*100), lst_2_s(values[:,0]), lst_2_s(values[:,1])], dtype=object))
+                            if debug: 
+                                print("get_code_name_02: ", err, values.shape, values)
+                                print("get_code_name_02: rez:", rez)
                     else:
-                        values = df_dict[df_dict[option_col_dict]==name][[option_col_dict, code_col_dict, name_col_dict]].values
+                        # values = df_dict[df_dict[option_col_dict]==name][[option_col_dict, code_col_dict, name_col_dict]].values
+                        values = df_dict[df_dict[option_col_dict]==name][[option_col_dict, code_col_dict, name_col_dict]].\
+                              drop_duplicates(subset=[option_col_dict, code_col_dict, name_col_dict]).values
                         try:
-                            rez.append(np.array([round(score*100), values[:,0], values[:,1], values[:,2]], dtype=object))
+                            # rez.append(np.array([round(score*100), values[:,0], values[:,1], values[:,2]], dtype=object))
+                            rez.append(np.array([round(score*100), lst_2_s(values[:,0]), lst_2_s(values[:,1]), lst_2_s(values[:,2])], dtype=object))
                         except Exception as err:
-                            if debug: print("get_code_name: ", err, values.shape, values)
-                            rez.append(np.array([round(score*100), values[:,0], values[:,1], values[:,2]], dtype=object))
+                            # print("get_code_name_02: ", err, values.shape, values)
+                            rez.append(np.array([round(score*100), lst_2_s(values[:,0]), lst_2_s(values[:,1]), lst_2_s(values[:,2])], dtype=object))
+                            if debug: 
+                                print("get_code_name_02: ", err, values.shape, values)
+                                print("get_code_name_02: rez:", rez)
+                            
                 else: break
             
             return np.array(rez)
@@ -836,15 +849,16 @@ def semantic_search_02 (df_test, col_name_check,
             d_row.update({f"{col}":[]})
         
         query_embedding = model.encode(s) #row[col_name_check])
-        if debug: print("\nsemantic_search:", i_row, s)
+        # if debug: print("\nsemantic_search:", i_row, s)
         dict_id_score_lst = util.semantic_search (query_embedding, dict_embedding, top_k = max_sim_entries)
-        if debug: print(f"semantic_search: dict_id_score_lst: {dict_id_score_lst}")
+        # if debug: print(f"semantic_search: dict_id_score_lst: {dict_id_score_lst}")
         
         # values = get_code_name(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=debug)
         values = get_code_name_02(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=debug)
         if debug: 
-            print("semantic_search: -> get_code_name values:", values )
-            print()
+            #print("semantic_search: -> get_code_name values:", values )
+            #print()
+            pass
         if len(values)>0:
             if option_col_dict is None:
                 try:
@@ -854,15 +868,47 @@ def semantic_search_02 (df_test, col_name_check,
                         # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), values_row[0], values_row[1] if type(values_row[1])==str else None, values_row[2]))
                         for ic, col in enumerate(new_cols_semantic):
                             if ic == 0:
-                                d_row[f"{col}"].append(values_row[ic])
-                            # else: d_row[f"{col}"].append(values_row[ic][0])
-                            else: d_row[f"{col}"].append(values_row[ic])
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    # if ((type(d_row[f"{col}"])==list)):
+                                    d_row[f"{col}"].extend(lst_2s(values_row[ic]))
+                                    # else:
+                                    #     d_row[f"{col}"].append(lst_2s(values_row[ic]))
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
+                            else: 
+                                # d_row[f"{col}"].append(values_row[ic][0])
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    d_row[f"{col}"].extend(lst_2s(values_row[ic]))
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
+                            # else: d_row[f"{col}"].append(values_row[ic])
                     dict_test_f02[i_row] = d_row
                     
                     # lst_test_f02[i_row].update(dict(zip(new_cols_semantic,(values_row[0], values_row[1][0] if type(values_row[1][0])==str else None ,values_row[2][0]))))
                 except Exception as err:
-                    if debug: print("semantic_search:", err, values.shape, values)
+                    if debug: 
+                        print()
+                        print("\nsemantic_search:", i_row, s)
+                        print("semantic_search:", err, values.shape, values)
+                    # print("semantic_search:", err, values.shape, values)
                     df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2]
+                    for i_vr, values_row in enumerate(values):
+                        for ic, col in enumerate(new_cols_semantic):
+                            if ic == 0:
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    # if ((type(d_row[f"{col}"])==list)):
+                                    d_row[f"{col}"].extend(values_row[ic])
+                                    # else:
+                                    #     d_row[f"{col}"].append(values_row[ic])
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
+                            else: 
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    d_row[f"{col}"].extend(values_row[ic])
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
+                                # d_row[f"{col}"].append(values_row[ic][0])
+                    dict_test_f02[i_row] = d_row
             else: 
                 # print(values.shape, values)
                 try:
@@ -872,19 +918,50 @@ def semantic_search_02 (df_test, col_name_check,
                         # if i_row==0: print(values_row.shape, values_row)
                         # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), values_row[0], values_row[1] if type(values_row[1])==str else None, values_row[2], values_row[3]))
                         for ic, col in enumerate(new_cols_semantic):
-                            if ic == 0:
-                                d_row[f"{col}"].append(values_row[ic])
+                            # if ic == 0:
+                            #     d_row[f"{col}"].append(values_row[ic])
                             # else: d_row[f"{col}"].append(values_row[ic][0])
-                            else: d_row[f"{col}"].append(values_row[ic])
+                            # else: d_row[f"{col}"].append(values_row[ic])
+                            if ic == 0:
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    d_row[f"{col}"].extend(values_row[ic])
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
+                            else: 
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    d_row[f"{col}"].extend(values_row[ic])
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
                     dict_test_f02[i_row] = d_row
                 except Exception as err:
-                    if debug: print("semantic_search:", err, values.shape, values)
+                    if debug: 
+                        print()
+                        print("\nsemantic_search:", i_row, s)
+                        print("semantic_search:", err, values.shape, values)
                     df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2], values[:,3]
+                    for i_vr, values_row in enumerate(values):
+                        for ic, col in enumerate(new_cols_semantic):
+                            # if ic == 0:
+                            #     d_row[f"{col}"].append(values_row[ic])
+                            # else: d_row[f"{col}"].append(values_row[ic][0])
+                            if ic == 0:
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    d_row[f"{col}"].extend(values_row[ic])
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
+                            else: 
+                                if ((type(values_row[ic])==list) or (type(values_row[ic])==np.ndarray)):
+                                    d_row[f"{col}"].extend(values_row[ic])
+                                else:
+                                    d_row[f"{col}"].append(values_row[ic])
+                            # else: d_row[f"{col}"].append(values_row[ic])
+                    dict_test_f02[i_row] = d_row
         elif len(values)==0:
             # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), empty_values_row))
             # lst_test_f02[i_row].update(dict(zip(new_cols_semantic, empty_values_row)))
             dict_test_f02[i_row] = d_row
-            pass
+        else: dict_test_f02[i_row] = d_row
+            # pass
     return df_test, dict_test_f02
 
 def load_sentence_model():
@@ -1109,12 +1186,12 @@ def mi_search( data_source_dir, data_processed_dir,
                 print(err, "dict_test_f02.get(k) is None", k)
         
         if by_prod_options:
-            format_cols.extend([60, 10,15, 60])
+            format_cols.extend([10, 60, 15, 60])
             new_cols_semantic_gos_options = ['sim_semantic_4_gos_option', 'option_semantic_4_gos_option', 'code_semantic_4_gos_option', 'name_semantic_4_gos_option']
             name_col_dict_gos_option, code_col_dict_gos_option, option_col_dict_gos_option = 'name_clean', 'kind', 'option'
             # logger.info("Semantic search on options in gos dictionary - start...")
             logger.info("Сематнтический поиск по Вариантам исполнения из гос реестра МИ - Старт..." )
-            dict_gos_options_unique = df_mi_org_gos_prod_options[option_col_dict_gos_option].unique()
+            #dict_gos_options_unique = df_mi_org_gos_prod_options[option_col_dict_gos_option].unique()
             dict_gos_options_unique = dict_lst_gos_prod_options
             # 'name_clean', 'kind', 'i_option', 'option'
             # df_test = semantic_search (df_test, col_name_check, 
@@ -1132,6 +1209,9 @@ def mi_search( data_source_dir, data_processed_dir,
                 #else:
                 except Exception as err:
                     print(err, "dict_test_f02.get(k) is None", k)
+                    print("dict_test_f02.get(k):" , dict_test_f02.get(k))
+                    print("dict_test_f02:" , dict_test_f02)
+                    print("dict_test_f02_tmp:" , dict_test_f02_tmp)
         else: 
             new_cols_semantic_gos_options = []
       # dict_embedding_gos_prod_options_multy
@@ -1163,15 +1243,14 @@ def format_excel_cols(data_processed_dir, fn_xls, format_cols):
     ws = wb.active
     l_alignment=Alignment(horizontal='left', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
     r_alignment=Alignment(horizontal='right', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
-    border = Border( #left=Side(border_style="thin", color='FF000000'),
-     #            right=Side(border_style="thin", color='FF000000'),
-     #            top=Side(border_style="thin", color='FF000000'),
-     #            bottom=Side(border_style="thin", color='FF000000'),
+    border = Border( left=Side(border_style="thin", color='FF000000'),
+                 right=Side(border_style="thin", color='FF000000'),
+                 top=Side(border_style="thin", color='FF000000'),
+                 bottom=Side(border_style="thin", color='FF000000'),
      #            diagonal=Side(border_style=None,
      #                          color='FF000000'),
      #            diagonal_direction=0,
-                 outline=Side(border_style="thin",
-                              color='FF000000'),
+     #            outline=Side(border_style="thin", color='FF000000'),
      #            vertical=Side(border_style=None,
      #                          color='FF000000'),
      #            horizontal=Side(border_style=None,
