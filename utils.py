@@ -1008,8 +1008,10 @@ def mi_search( data_source_dir, data_processed_dir,
                                 new_cols_fuzzy, similarity_threshold, max_sim_entries, n_rows = n_rows)
             # fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf)
         display(df_test.head(2))
-        print(list(dict_test_f02.items())[:2])
-    else: new_cols_fuzzy = []
+        # print(list(dict_test_f02.items())[:2])
+    else: 
+        new_cols_fuzzy = []
+        dict_test_f02 = None
     
     
     model = load_sentence_model()
@@ -1032,10 +1034,18 @@ def mi_search( data_source_dir, data_processed_dir,
                      new_cols_semantic, 
                      similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
-        print(list(dict_test_f02_tmp.items())[:2])
-        for k,v in dict_test_f02.items():
-            dict_test_f02[k].update(dict_test_f02_tmp[k])
-    else: new_cols_semantic = []
+        # print(list(dict_test_f02_tmp.items())[:2])
+        if dict_test_f02 is not None:
+            for k,v in dict_test_f02.items():
+                try: #if dict_test_f02.get(k) is not None:
+                    dict_test_f02[k].update(dict_test_f02_tmp.get(k))
+                #else:
+                except Exception as err:
+                    print(err, "dict_test_f02.get(k) is None", k)
+        else: dict_test_f02 = dict_test_f02_tmp
+    else: 
+        new_cols_semantic = []
+        dict_test_f02 = None
     if by_big_dict:
         df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = df_dicts
         
@@ -1066,11 +1076,14 @@ def mi_search( data_source_dir, data_processed_dir,
                      new_cols_semantic_gos, 
                      similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
-        for k,v in dict_test_f02.items():
-            if dict_test_f02.get(k) is not None:
-                dict_test_f02[k].update(dict_test_f02_tmp.get(k))
-            else:
-                print("dict_test_f02.get(k) is None", k)
+        if dict_test_f02 is not None:
+            for k,v in dict_test_f02.items():
+                try: #if dict_test_f02.get(k) is not None:
+                    dict_test_f02[k].update(dict_test_f02_tmp.get(k))
+                #else:
+                except Exception as err:
+                    print(err, "dict_test_f02.get(k) is None", k)
+        else: dict_test_f02 = dict_test_f02_tmp
 
         format_cols.extend([10,15, 60])
         new_cols_semantic_national = ['sim_semantic_3_national', 'code_semantic_3_national', 'name_semantic_3_national']
@@ -1089,10 +1102,11 @@ def mi_search( data_source_dir, data_processed_dir,
                      similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
         for k,v in dict_test_f02.items():
-            if dict_test_f02.get(k) is not None:
+            try: # if dict_test_f02.get(k) is not None:
                 dict_test_f02[k].update(dict_test_f02_tmp.get(k))
-            else:
-                print("dict_test_f02.get(k) is None", k)
+            #else:
+            except Exception as err:
+                print(err, "dict_test_f02.get(k) is None", k)
         
         if by_prod_options:
             format_cols.extend([60, 10,15, 60])
@@ -1113,10 +1127,11 @@ def mi_search( data_source_dir, data_processed_dir,
                         similarity_threshold, max_sim_entries, n_rows = n_rows) #, debug= debug
             display(df_test.head(2))
             for k,v in dict_test_f02.items():
-                if dict_test_f02.get(k) is not None:
+                try: #if dict_test_f02.get(k) is not None:
                     dict_test_f02[k].update(dict_test_f02_tmp.get(k))
-                else:
-                    print("dict_test_f02.get(k) is None", k)
+                #else:
+                except Exception as err:
+                    print(err, "dict_test_f02.get(k) is None", k)
         else: 
             new_cols_semantic_gos_options = []
       # dict_embedding_gos_prod_options_multy
