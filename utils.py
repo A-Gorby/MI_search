@@ -8,6 +8,7 @@ import xlrd
 
 import json
 import itertools
+from itertools import zip_longest
 #from urllib.request import urlopen
 #import requests, xmltodict
 import time, datetime
@@ -78,7 +79,7 @@ class Logger():
 logger = Logger().logger
 logger.propagate = False
 
-def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
+def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None, index=False):
     offset = datetime.timezone(datetime.timedelta(hours=3))
     dt = datetime.datetime.now(offset)
     str_date = dt.strftime("%Y_%m_%d_%H%M")
@@ -87,9 +88,9 @@ def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
     if e is None or (e <0):
         e = df.shape[0]
     if columns is None:
-        df[b:e].to_excel(path_to_save + fn, index = False)
+        df[b:e].to_excel(os.path.join(path_to_save, fn), index = index)
     else:
-        df[b:e].to_excel(path_to_save + fn, index = False, columns = columns)
+        df[b:e].to_excel(os.path.join(path_to_save, fn), index = index, columns = columns)
     logger.info(fn + ' saved to ' + path_to_save)
     hfs = get_humanize_filesize(path_to_save, fn)
     logger.info("Size: " + str(hfs))
@@ -106,22 +107,6 @@ def get_humanize_filesize(path, fn):
         human_file_size = humanize.naturalsize(file_size)
     return human_file_size
     
-def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
-    offset = datetime.timezone(datetime.timedelta(hours=3))
-    dt = datetime.datetime.now(offset)
-    str_date = dt.strftime("%Y_%m_%d_%H%M")
-    fn = fn_main + '_' + str_date + '.xlsx'
-    logger.info(f"'{fn}' save - start ...")
-    if e is None or (e <0):
-        e = df.shape[0]
-    if columns is None:
-        df[b:e].to_excel(path_to_save + fn, index = False)
-    else:
-        df[b:e].to_excel(path_to_save + fn, index = False, columns = columns)
-    logger.info(f"'{fn}' saved to '{path_to_save}'")
-    hfs = get_humanize_filesize(path_to_save, fn)
-    logger.info("Size: " + str(hfs))
-    return fn   
 def restore_df_from_pickle(path_files, fn_pickle):
 
     if fn_pickle is None:
@@ -178,23 +163,6 @@ def get_humanize_filesize(path, fn):
         human_file_size = humanize.naturalsize(file_size)
     return human_file_size
     
-def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
-    offset = datetime.timezone(datetime.timedelta(hours=3))
-    dt = datetime.datetime.now(offset)
-    str_date = dt.strftime("%Y_%m_%d_%H%M")
-    fn = fn_main + '_' + str_date + '.xlsx'
-    logger.info(f"'{fn}' save - start ...")
-    if e is None or (e <0):
-        e = df.shape[0]
-    if columns is None:
-        df[b:e].to_excel(os.path.join(path_to_save,fn), index = False)
-    else:
-        df[b:e].to_excel(os.path.join(path_to_save,fn), index = False, columns = columns)
-    logger.info(f"'{fn}' saved to '{path_to_save}'")
-    hfs = get_humanize_filesize(path_to_save, fn)
-    logger.info("Size: " + str(hfs))
-    return fn         
-
 def np_unique_nan(lst: np.array, debug = False)->np.array: # a la version 2.4
     lst_unique = None
     if lst is None or (((type(lst)==float) or (type(lst)==np.float64)) and np.isnan(lst)):
@@ -537,6 +505,57 @@ def fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_co
             df_test.loc[i_row, new_cols_fuzzy] = np_unique_nan(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2]) 
     return df_test
 
+
+def fuzzy_search_02 (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf):
+    def get_code_name(tuple_name_sim_lst, name_col_dict, code_col_dict, similarity_threshold):
+        # name = dict_lst[id]
+        # values = df_dict.query("@name_col_dict=@name")[[name_col_dict, code_col_dict]].values
+        rez = [] # np.array([[], [], []])
+        for name, similarity in tuple_name_sim_lst:
+            # print("name, similarity", name, similarity, similarity_threshold*100)
+            if similarity >= similarity_threshold*100:
+                values = df_dict[df_dict[name_col_dict_local]==name][[code_col_dict_local, name_col_dict_local]].values
+                # print("values", values)
+                rez.append(np.array([similarity, np_unique_nan(values[:,0]), np_unique_nan(values[:,1])], dtype=object))
+            else: break
+        return np.array(rez)
+    def get_code_name_02(tuple_name_sim_lst, name_col_dict, code_col_dict, similarity_threshold):
+        rez = []
+        for name, similarity in tuple_name_sim_lst:
+            if similarity >= similarity_threshold*100:
+                values = df_dict[df_dict[name_col_dict_local]==name][[code_col_dict_local, name_col_dict_local]].values
+                rez.append(np.array([similarity, values[:,0], values[:,1]], dtype=object))
+            else: break
+        return np.array(rez)
+    
+    dict_lst = df_dict[name_col_dict_local].unique()
+    df_test[new_cols_fuzzy] = None
+    empty_values_row = np.array([None, None, None])
+    dict_test_f02 = {}
+    for i_row, row in tqdm(df_test.iterrows(), total = df_test.shape[0]):
+        if i_row > n_rows: break
+        s = row[col_name_check]
+        tuple_name_sim_lst = process.extract(s, dict_lst, limit=max_sim_entries)
+        # print(i_row, s, tuple_name_sim_lst)
+        values = get_code_name_02(tuple_name_sim_lst, code_col_dict_local, name_col_dict_local, similarity_threshold)
+        d_row = { f"{col_name_check}": s}
+        for col in new_cols_fuzzy:
+            d_row.update({f"{col}":[]})
+        if len(values)>0:
+            df_test.loc[i_row, new_cols_fuzzy] = np_unique_nan(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2]) 
+            
+            for i_vr, values_row in enumerate(values):
+                # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), values_row[0], values_row[1] if type(values_row[1])==str else None, values_row[2]))
+                for ic, col in enumerate(new_cols_fuzzy):
+                    if ic == 0:
+                        d_row[f"{col}"].append(values_row[ic])
+                    else: d_row[f"{col}"].append(values_row[ic][0])
+            dict_test_f02[i_row] = d_row
+        elif len(values)==0:
+            # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), empty_values_row))
+            dict_test_f02[i_row] = d_row
+        
+    return df_test, dict_test_f02
 new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
 new_cols_semantic = ['sim_semantic_1_local', 'code_semantic_1_local', 'name_semantic_1_local']
 new_cols_semantic_gos = ['sim_semantic_2_gos', 'code_semantic_2_gos', 'name_semantic_2_gos']
@@ -731,6 +750,142 @@ def semantic_search (df_test, col_name_check,
                     df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2], values[:,3]
 
     return df_test
+def semantic_search_02 (df_test, col_name_check, 
+                     dict_unique, df_dict, name_col_dict, code_col_dict,
+                     option_col_dict,
+                     model, dict_embedding, 
+                     new_cols_semantic, 
+                     similarity_threshold, max_sim_entries=2, n_rows=np.inf,
+                     debug=False):
+    def get_code_name(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=False):
+        # name = dict_lst[id]
+        # values = df_dict.query("@name_col_dict=@name")[[name_col_dict, code_col_dict]].values
+        rez = [] # np.array([[], [], []])
+        # 'corpus_id': 182, 'score'
+        if len(dict_id_score_lst[0]) > 0:
+            for dict_id_score in dict_id_score_lst[0]:
+                if debug: print("get_code_name: dict_score_id", dict_id_score)
+                id, score = dict_id_score.values()
+                if debug: print(f"get_code_name: score: {score}, id : {id}")
+                if float(score) >= similarity_threshold:
+                    name = dict_unique[id]
+                    if option_col_dict is None:
+                        values = df_dict[df_dict[name_col_dict]==name][[code_col_dict, name_col_dict]].values
+                        try:
+                            rez.append(np.array([round(score*100), np_unique_nan(values[:,0]), np_unique_nan(values[:,1])], dtype=object))
+                        except Exception as err:
+                            if debug: print("get_code_name: ", err, values.shape, values)
+                            rez.append(np.array([round(score*100), values[:,0], values[:,1]], dtype=object))
+                    else:
+                        values = df_dict[df_dict[option_col_dict]==name][[option_col_dict, code_col_dict, name_col_dict]].values
+                        try:
+                            rez.append(np.array([round(score*100), np_unique_nan(values[:,0]), 
+                                             np_unique_nan(values[:,1]), np_unique_nan(values[:,2])], dtype=object))
+                        except Exception as err:
+                            if debug: print("get_code_name: ", err, values.shape, values)
+                            rez.append(np.array([round(score*100), values[:,0], values[:,1], values[:,2]], dtype=object))
+                else: break
+            
+            return np.array(rez)
+        else: 
+            if option_col_dict is None: return np.array([None, None, None])
+            else: return np.array([None, None, None, None])
+    def get_code_name_02(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=False):
+        rez = [] # np.array([[], [], []])
+        if len(dict_id_score_lst[0]) > 0:
+            for dict_id_score in dict_id_score_lst[0]:
+                if debug: print("get_code_name: dict_score_id", dict_id_score)
+                id, score = dict_id_score.values()
+                if debug: print(f"get_code_name: score: {score}, id : {id}")
+                if float(score) >= similarity_threshold:
+                    name = dict_unique[id]
+                    if option_col_dict is None:
+                        values = df_dict[df_dict[name_col_dict]==name][[code_col_dict, name_col_dict]].values
+                        try:
+                            rez.append(np.array([round(score*100), np_unique_nan(values[:,0]), np_unique_nan(values[:,1])], dtype=object))
+                        except Exception as err:
+                            if debug: print("get_code_name: ", err, values.shape, values)
+                            rez.append(np.array([round(score*100), values[:,0], values[:,1]], dtype=object))
+                    else:
+                        values = df_dict[df_dict[option_col_dict]==name][[option_col_dict, code_col_dict, name_col_dict]].values
+                        try:
+                            rez.append(np.array([round(score*100), values[:,0], values[:,1], values[:,2]], dtype=object))
+                        except Exception as err:
+                            if debug: print("get_code_name: ", err, values.shape, values)
+                            rez.append(np.array([round(score*100), values[:,0], values[:,1], values[:,2]], dtype=object))
+                else: break
+            
+            return np.array(rez)
+        else: 
+            if option_col_dict is None: return np.array([None, None, None])
+            else: return np.array([None, None, None, None])
+
+    df_test[new_cols_semantic] = None
+    if option_col_dict is None: empty_values_row = np.array([None, None, None])
+    else: empty_values_row = np.array([None, None, None, None])
+    # df_test_f02 = pd.DataFrame( (1 + len(new_cols_semantic))*[], columns = [col_name_check] + new_cols_semantic)
+    # print(df_test_f02.columns)
+    dict_test_f02 = {}
+
+    for i_row, row in tqdm(df_test.iterrows(), total = df_test.shape[0]):
+    
+        if i_row > n_rows: break
+        s = row[col_name_check]
+        d_row = { f"{col_name_check}": s}
+        for col in new_cols_semantic:
+            d_row.update({f"{col}":[]})
+        
+        query_embedding = model.encode(s) #row[col_name_check])
+        if debug: print("\nsemantic_search:", i_row, s)
+        dict_id_score_lst = util.semantic_search (query_embedding, dict_embedding, top_k = max_sim_entries)
+        if debug: print(f"semantic_search: dict_id_score_lst: {dict_id_score_lst}")
+        
+        # values = get_code_name(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=debug)
+        values = get_code_name_02(dict_id_score_lst, dict_unique, df_dict, name_col_dict, code_col_dict, option_col_dict, similarity_threshold, debug=debug)
+        if debug: 
+            print("semantic_search: -> get_code_name values:", values )
+            print()
+        if len(values)>0:
+            if option_col_dict is None:
+                try:
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2])
+                    for i_vr, values_row in enumerate(values):
+                        # if i_row==0: print(values_row.shape, values_row)
+                        # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), values_row[0], values_row[1] if type(values_row[1])==str else None, values_row[2]))
+                        for ic, col in enumerate(new_cols_semantic):
+                            if ic == 0:
+                                d_row[f"{col}"].append(values_row[ic])
+                            # else: d_row[f"{col}"].append(values_row[ic][0])
+                            else: d_row[f"{col}"].append(values_row[ic])
+                    dict_test_f02[i_row] = d_row
+                    
+                    # lst_test_f02[i_row].update(dict(zip(new_cols_semantic,(values_row[0], values_row[1][0] if type(values_row[1][0])==str else None ,values_row[2][0]))))
+                except Exception as err:
+                    if debug: print("semantic_search:", err, values.shape, values)
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2]
+            else: 
+                # print(values.shape, values)
+                try:
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), np_unique_nan(values[:,1]), np_unique_nan(values[:,2]), np_unique_nan(values[:,3])
+                    # lst_test_f02[i_row].update(dict(zip(new_cols_semantic,(values_row[0], values_row[1][0] if type(values_row[1][0])==str else None , values_row[2][0], values_row[3][0]))))
+                    for i_vr, values_row in enumerate(values):
+                        # if i_row==0: print(values_row.shape, values_row)
+                        # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), values_row[0], values_row[1] if type(values_row[1])==str else None, values_row[2], values_row[3]))
+                        for ic, col in enumerate(new_cols_semantic):
+                            if ic == 0:
+                                d_row[f"{col}"].append(values_row[ic])
+                            # else: d_row[f"{col}"].append(values_row[ic][0])
+                            else: d_row[f"{col}"].append(values_row[ic])
+                    dict_test_f02[i_row] = d_row
+                except Exception as err:
+                    if debug: print("semantic_search:", err, values.shape, values)
+                    df_test.loc[i_row, new_cols_semantic] = lst_2_s(values[:,0]), values[:,1], values[:,2], values[:,3]
+        elif len(values)==0:
+            # df_test_f02.loc[len(df_test_f02)] = np.hstack((np.array(s, dtype=str), empty_values_row))
+            # lst_test_f02[i_row].update(dict(zip(new_cols_semantic, empty_values_row)))
+            dict_test_f02[i_row] = d_row
+            pass
+    return df_test, dict_test_f02
 
 def load_sentence_model():
     # logger.info(f"MultyLangual model dounlowd - start...")
@@ -772,6 +927,36 @@ def on_big_dict_value_change(change):
         radio_btn_prod_options.disabled = True 
         radio_btn_prod_options.value = 'Нет'     
 
+def dict_2_df(dict_test_f02, col_name_check, new_cols_fuzzy, new_cols_semantic,
+             new_cols_semantic_gos, new_cols_semantic_national, new_cols_semantic_gos_options):
+    all_columns = [col_name_check] + new_cols_fuzzy + new_cols_semantic\
+             + new_cols_semantic_gos + new_cols_semantic_national + new_cols_semantic_gos_options
+    
+    # df_total = pd.DataFrame( [len(all_columns)*[None]],  columns=all_columns)
+    df_total = pd.DataFrame( None,  columns=all_columns)
+    # display(df_total)
+    # print(100*'*')
+    for i_row, (k,v) in enumerate(dict_test_f02.items()):
+        # dict_test_f02[k].update(dict_test_f02_tmp[k])
+        for kk,vv in list(dict_test_f02[k].items())[1:]:
+            if not ((type(vv)==list) or (type(vv)==np.ndarray)):
+                dict_test_f02[k][kk] = [vv]
+        try:
+            d = dict_test_f02[k]
+            l = list(zip_longest(*list(d.values())[1:]))
+            l = [[d['Наименование МИ/РМ']] + list(ll) for ll in l]
+            df = pd.DataFrame(l, columns = d.keys())
+            # df = pd.DataFrame.from_dict(dict_test_f02[k], orient='columns') #, index=[0]
+        except Exception as err:
+            print(100*'*')
+            print(err)
+            print(i_row, dict_test_f02[k])
+            display(df)
+        df_total = pd.concat([df_total,df])
+
+    return df_total
+
+
 df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = None, None, None, None, None, None, None
 
 def mi_search( data_source_dir, data_processed_dir,
@@ -782,7 +967,8 @@ def mi_search( data_source_dir, data_processed_dir,
               by_big_dict = False,
               by_prod_options = False,
               df_dicts = [],
-              debug=False
+              debug=False,
+              n_rows = np.inf
 ):
     # if 'data_source_dir' not in locals()  or 'data_processed_dir' not in locals():
     #     logger.error(F"Переменные data_source_dir' и'data_processed_dir' не определены")
@@ -813,15 +999,17 @@ def mi_search( data_source_dir, data_processed_dir,
         sys.exit(2)
     
     format_cols = [60]
-    new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
     format_cols.extend([10, 15, 60])
     if fn_dict_file is not None and df_dict is not None:
         # logger.info("Fuzzy search on local dictionary - start...")
         logger.info("Нечеткий (Fuzzy) поиск по локальному справочнику - Старт...")
-        df_test = fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, 
-                                new_cols_fuzzy, similarity_threshold, max_sim_entries) #, n_rows=2)
+        new_cols_fuzzy = ['similarity_fuzzy', 'sim_fuzzy_code', 'sim_fuzzy_name', ]
+        df_test, dict_test_f02 = fuzzy_search_02 (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, 
+                                new_cols_fuzzy, similarity_threshold, max_sim_entries, n_rows = n_rows)
             # fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf)
         display(df_test.head(2))
+        print(list(dict_test_f02.items())[:2])
+    else: new_cols_fuzzy = []
     
     
     model = load_sentence_model()
@@ -831,16 +1019,23 @@ def mi_search( data_source_dir, data_processed_dir,
         new_cols_semantic = ['sim_semantic_1_local', 'code_semantic_1_local', 'name_semantic_1_local']
         dict_local_unique = df_dict[name_col_dict_local].unique()
         option_col_dict_local = None
+        logger.info("Формирование ембеддингов локального справочника - Старт..." )
+        dict_embedding_local = model.encode(dict_local_unique, show_progress_bar=True)
+        logger.info("Формирование ембеддингов локального справочника - Финиш!" )
+        # df_test = semantic_search (df_test, col_name_check, 
         # logger.info("Semantic search on local dictionary - start...")
         logger.info("Сематнтический поиск по локальному справочнику - Старт..." )
-        dict_embedding_local = model.encode(dict_local_unique, show_progress_bar=True)
-        df_test = semantic_search (df_test, col_name_check, 
+        df_test, dict_test_f02_tmp = semantic_search_02 (df_test, col_name_check, 
                      dict_local_unique, df_dict, name_col_dict_local, code_col_dict_local,
                      option_col_dict_local, 
                      model, dict_embedding_local, 
                      new_cols_semantic, 
-                     similarity_threshold, max_sim_entries) #, n_rows=2)
+                     similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
+        print(list(dict_test_f02_tmp.items())[:2])
+        for k,v in dict_test_f02.items():
+            dict_test_f02[k].update(dict_test_f02_tmp[k])
+    else: new_cols_semantic = []
     if by_big_dict:
         df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = df_dicts
         
@@ -863,13 +1058,16 @@ def mi_search( data_source_dir, data_processed_dir,
         logger.info("Сематнтический поиск по гос реестру МИ - Старт..." )
         dict_gos_unique = df_mi_org_gos[name_col_dict_gos].unique()
         # dict_embedding_gos = model.encode(dict_gos_unique, show_progress_bar=True)
-        df_test = semantic_search (df_test, col_name_check, 
+        # df_test = semantic_search (df_test, col_name_check, 
+        df_test, dict_test_f02_tmp = semantic_search_02 (df_test, col_name_check, 
                      dict_gos_unique, df_mi_org_gos, name_col_dict_gos, code_col_dict_gos,
                      option_col_dict_gos,
                      model, dict_embedding_gos_multy, 
                      new_cols_semantic_gos, 
-                     similarity_threshold, max_sim_entries) #, n_rows=2)
+                     similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
+        for k,v in dict_test_f02.items():
+            dict_test_f02[k].update(dict_test_f02_tmp[k])
 
         format_cols.extend([10,15, 60])
         new_cols_semantic_national = ['sim_semantic_3_national', 'code_semantic_3_national', 'name_semantic_3_national']
@@ -879,13 +1077,16 @@ def mi_search( data_source_dir, data_processed_dir,
         logger.info("Сематнтический поиск по реестру МИ по национальнмоу законодательству - Старт..." )
         dict_national_unique = df_mi_national[name_col_dict_national].unique()
         # dict_embedding_gos = model.encode(dict_gos_unique, show_progress_bar=True)
-        df_test = semantic_search (df_test, col_name_check, 
+        # df_test = semantic_search (df_test, col_name_check, 
+        df_test, dict_test_f02_tmp = semantic_search_02 (df_test, col_name_check, 
                      dict_national_unique, df_mi_national, name_col_dict_national, code_col_dict_national,
                      option_col_dict_national,
                      model, dict_embedding_national_multy, # dict_embedding_gos_prod_options_multy, #
                      new_cols_semantic_national, 
-                     similarity_threshold, max_sim_entries) #, n_rows=2)
+                     similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
+        for k,v in dict_test_f02.items():
+            dict_test_f02[k].update(dict_test_f02_tmp[k])
         
         if by_prod_options:
             format_cols.extend([60, 10,15, 60])
@@ -896,28 +1097,49 @@ def mi_search( data_source_dir, data_processed_dir,
             dict_gos_options_unique = df_mi_org_gos_prod_options[option_col_dict_gos_option].unique()
             dict_gos_options_unique = dict_lst_gos_prod_options
             # 'name_clean', 'kind', 'i_option', 'option'
-            df_test = semantic_search (df_test, col_name_check, 
+            # df_test = semantic_search (df_test, col_name_check, 
+            df_test, dict_test_f02_tmp = semantic_search_02 (df_test, col_name_check, 
                         dict_gos_options_unique, df_mi_org_gos_prod_options, 
                         name_col_dict_gos_option, code_col_dict_gos_option, option_col_dict_gos_option,
                         model, 
                         dict_embedding_gos_prod_options_multy, 
                         new_cols_semantic_gos_options, 
-                        similarity_threshold, max_sim_entries) #,n_rows=12, debug= debug
+                        similarity_threshold, max_sim_entries, n_rows = n_rows) #, debug= debug
             display(df_test.head(2))
+            for k,v in dict_test_f02.items():
+                dict_test_f02[k].update(dict_test_f02_tmp[k])
+        else: 
+            new_cols_semantic_gos_options = []
       # dict_embedding_gos_prod_options_multy
+    else:
+        new_cols_semantic_gos = []
+        new_cols_semantic_national = []
+        new_cols_semantic_gos_options = []
         
-    fn_main = fn_check_file.split('.xlsx')[0] + '_processed'
-    fn_save = save_df_to_excel(df_test, data_processed_dir, fn_main)
+    fn_main = fn_check_file.split('.xlsx')[0] + '_processed_pivot'
+    
+    df_test_f02 = dict_2_df(dict_test_f02, col_name_check, new_cols_fuzzy, new_cols_semantic,
+             new_cols_semantic_gos, new_cols_semantic_national, new_cols_semantic_gos_options)
+    
+    #fn_save = save_df_to_excel(df_test, data_processed_dir, fn_main)
+    # fn_save = save_df_to_excel(df_test_f02.set_index([col_name_check] + new_cols_fuzzy + new_cols_semantic\
+    #             + new_cols_semantic_gos + new_cols_semantic_national + new_cols_semantic_gos_options), data_processed_dir, fn_main)
+    fn_save = save_df_to_excel(df_test_f02.set_index(list(df_test_f02.columns)[:-1]), data_processed_dir, fn_main, index = True)
     format_excel_cols(data_processed_dir, fn_save, format_cols)
     fn_save_stat = save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold)
+
+    fn_main = fn_check_file.split('.xlsx')[0] + '_processed_flat'
+    fn_save = save_df_to_excel(df_test_f02, data_processed_dir, fn_main)
+    format_excel_cols(data_processed_dir, fn_save, format_cols)
     
-    return df_test
+    return df_test, df_test_f02
 
 def format_excel_cols(data_processed_dir, fn_xls, format_cols):
     wb = load_workbook(os.path.join(data_processed_dir, fn_xls))
     ws = wb.active
     l_alignment=Alignment(horizontal='left', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
     r_alignment=Alignment(horizontal='right', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
+    
     
     # ws.filterMode = True
     last_cell = ws.cell(row=1, column=len(format_cols)) 
@@ -927,6 +1149,13 @@ def format_excel_cols(data_processed_dir, fn_xls, format_cols):
     for ic, col_width in enumerate(format_cols):
         cell = ws.cell(row=1, column=ic+1)
         cell.alignment = l_alignment
-        
         ws.column_dimensions[cell.column_letter].width = col_width
+    ft = cell.font
+    ft = Font(bold=False)
+    for row in ws[full_range][1:]:
+        for cell in row:
+            cell.font = ft    
+            cell.alignment = l_alignment
+            
+        
     wb.save(os.path.join(data_processed_dir, fn_xls))
