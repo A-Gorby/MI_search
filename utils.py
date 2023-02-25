@@ -1139,6 +1139,20 @@ def format_excel_cols(data_processed_dir, fn_xls, format_cols):
     ws = wb.active
     l_alignment=Alignment(horizontal='left', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
     r_alignment=Alignment(horizontal='right', vertical= 'top', text_rotation=0, wrap_text=True, shrink_to_fit=False, indent=0)
+    border = Border( #left=Side(border_style="thin", color='FF000000'),
+     #            right=Side(border_style="thin", color='FF000000'),
+     #            top=Side(border_style="thin", color='FF000000'),
+     #            bottom=Side(border_style="thin", color='FF000000'),
+     #            diagonal=Side(border_style=None,
+     #                          color='FF000000'),
+     #            diagonal_direction=0,
+                 outline=Side(border_style="thin",
+                              color='FF000000'),
+     #            vertical=Side(border_style=None,
+     #                          color='FF000000'),
+     #            horizontal=Side(border_style=None,
+     #                           color='FF000000')
+     )
     
     
     # ws.filterMode = True
@@ -1152,10 +1166,12 @@ def format_excel_cols(data_processed_dir, fn_xls, format_cols):
         ws.column_dimensions[cell.column_letter].width = col_width
     ft = cell.font
     ft = Font(bold=False)
-    for row in ws[full_range][1:]:
+    for row in ws[full_range]: #[1:]
         for cell in row:
             cell.font = ft    
             cell.alignment = l_alignment
+            cell.border = border
+            
             
         
     wb.save(os.path.join(data_processed_dir, fn_xls))
