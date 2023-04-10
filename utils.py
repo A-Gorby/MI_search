@@ -1106,9 +1106,9 @@ def mi_search( data_source_dir, data_processed_dir,
                                 new_cols_fuzzy, similarity_threshold, max_sim_entries, n_rows = n_rows)
             # fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf)
         display(df_test.head(2))
-        print("df_test.shape:", df_test.shape)
+        # print("df_test.shape:", df_test.shape)
         # print(list(dict_test_f02.items())[:2])
-        print("len(dict_test_f02):", len(dict_test_f02))
+        # print("len(dict_test_f02):", len(dict_test_f02))
     else: 
         new_cols_fuzzy = []
         dict_test_f02 = None
@@ -1135,8 +1135,8 @@ def mi_search( data_source_dir, data_processed_dir,
                      similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
         # print(list(dict_test_f02_tmp.items())[:2])
-        print("df_test.shape:", df_test.shape)
-        print("len(dict_test_f02_tmp):", len(dict_test_f02_tmp))
+        # print("df_test.shape:", df_test.shape)
+        # print("len(dict_test_f02_tmp):", len(dict_test_f02_tmp))
         if dict_test_f02 is not None:
             for k,v in dict_test_f02.items():
                 try: #if dict_test_f02.get(k) is not None:
@@ -1145,11 +1145,11 @@ def mi_search( data_source_dir, data_processed_dir,
                 except Exception as err:
                     print(err, "dict_test_f02.get(k) is None", k)
         else: dict_test_f02 = dict_test_f02_tmp
-        print("len(dict_test_f02 - after semantic search 01:", len(dict_test_f02))
+        # print("len(dict_test_f02 - after semantic search 01:", len(dict_test_f02))
     else: 
         new_cols_semantic = []
         dict_test_f02 = None
-    print("len(dict_test_f02 - after semantic search 02:", len(dict_test_f02))
+    # print("len(dict_test_f02 - after semantic search 02:", len(dict_test_f02))
     if by_big_dict:
         df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = df_dicts
         
@@ -1249,15 +1249,15 @@ def mi_search( data_source_dir, data_processed_dir,
         
     fn_main = fn_check_file.split('.xlsx')[0] + '_processed_pivot'
     
-    print("len(dict_test_f02) - before save:" , len(dict_test_f02))
+    # print("len(dict_test_f02) - before save:" , len(dict_test_f02))
     df_test_f02 = dict_2_df(dict_test_f02, col_name_check, new_cols_fuzzy, new_cols_semantic,
              new_cols_semantic_gos, new_cols_semantic_national, new_cols_semantic_gos_options)
-    print("df_test_f02.shape - before save:", df_test_f02.shape)
+    # print("df_test_f02.shape - before save:", df_test_f02.shape)
     #fn_save = save_df_to_excel(df_test, data_processed_dir, fn_main)
     # fn_save = save_df_to_excel(df_test_f02.set_index([col_name_check] + new_cols_fuzzy + new_cols_semantic\
     #             + new_cols_semantic_gos + new_cols_semantic_national + new_cols_semantic_gos_options), data_processed_dir, fn_main)
     fn_save = save_df_to_excel(df_test_f02.set_index(list(df_test_f02.columns)[:-1]), data_processed_dir, fn_main, index = True)
-    print("df_test_f02.shape - after save_df_to_excel:", df_test_f02.shape)
+    # print("df_test_f02.shape - after save_df_to_excel:", df_test_f02.shape)
     format_excel_cols(data_processed_dir, fn_save, format_cols)
     fn_save_stat = save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold)
 
