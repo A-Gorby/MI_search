@@ -85,12 +85,18 @@ def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None, ind
     str_date = dt.strftime("%Y_%m_%d_%H%M")
     fn = fn_main + '_' + str_date + '.xlsx'
     logger.info(fn + ' save - start ...')
-    if e is None or (e <0):
-        e = df.shape[0]
+    #if e is None or (e <0):
+    #    e = df.shape[0]
     if columns is None:
-        df[b:e].to_excel(os.path.join(path_to_save, fn), index = index)
+        if e is None or (e <0):
+            df.to_excel(os.path.join(path_to_save, fn), index = index)
+        else: 
+            df[b:e].to_excel(os.path.join(path_to_save, fn), index = index)
     else:
-        df[b:e].to_excel(os.path.join(path_to_save, fn), index = index, columns = columns)
+        if e is None or (e <0):
+            df.to_excel(os.path.join(path_to_save, fn), index = index, columns = columns)
+        else:
+            df[b:e].to_excel(os.path.join(path_to_save, fn), index = index, columns = columns)
     logger.info(fn + ' saved to ' + path_to_save)
     hfs = get_humanize_filesize(path_to_save, fn)
     logger.info("Size: " + str(hfs))
@@ -186,8 +192,8 @@ def np_unique_nan(lst: np.array, debug = False)->np.array: # a la version 2.4
                     lst_unique = np.unique(np.array(lst, dtype=object))
                 elif  np.ndarray in data_types_set:
                     # print('elif  np.ndarray in data_types_set :')
-                    lst_unique = np.unique(lst.astype(object))
-                    # lst_unique = np_unique_nan(lst_unique)
+                    # lst_unique = np.unique(lst.astype(object))
+                    lst_unique = np_unique_nan(lst_unique)
                     lst_unique = np.asarray(lst, dtype = object)
                     # lst_unique = np.unique(lst_unique)
                 elif type(None) in data_types_set:
@@ -1015,22 +1021,37 @@ def dict_2_df(dict_test_f02, col_name_check, new_cols_fuzzy, new_cols_semantic,
     # print(100*'*')
     for i_row, (k,v) in enumerate(dict_test_f02.items()):
         # dict_test_f02[k].update(dict_test_f02_tmp[k])
-        for kk,vv in list(dict_test_f02[k].items())[1:]:
+        # for kk,vv in list(dict_test_f02[k].items())[1:]:
+        for kk,vv in list(dict_test_f02[k].items())[:]:
             if not ((type(vv)==list) or (type(vv)==np.ndarray)):
                 dict_test_f02[k][kk] = [vv]
+            # if ((type(vv)==list) or (type(vv)==np.ndarray)):
+            #     dict_test_f02[k][kk] = vv
+            # else:
+            #     dict_test_f02[k][kk] = [vv]
         try:
             d = dict_test_f02[k]
-            l = list(zip_longest(*list(d.values())[1:]))
-            l = [[d['Наименование МИ/РМ']] + list(ll) for ll in l]
+            # print("len(d):", len(d))
+            # l = list(zip_longest(*list(d.values())[1:]))
+            l = list(zip_longest(*list(d.values())[:]))
+            # l = [[d['Наименование МИ/РМ']] + list(ll) for ll in l]
+            # l = [d['Наименование МИ/РМ'] + list(ll) for ll in l]
+            l = [list(ll) for ll in l]
             df = pd.DataFrame(l, columns = d.keys())
+            # df = pd.DataFrame(l, columns = ['Наименование МИ/РМ'] + list(d.keys()))
             # df = pd.DataFrame.from_dict(dict_test_f02[k], orient='columns') #, index=[0]
         except Exception as err:
             print(100*'*')
             print(err)
             print(i_row, dict_test_f02[k])
-            display(df)
-        df_total = pd.concat([df_total,df])
-
+            # display(df)
+            # sys.exit(2)
+        # print("df.columns:", df.columns)
+        df_total = pd.concat([df_total, df])
+        
+    # print(df_total.shape, df.shape)
+    # print(len(dict_test_f02))
+    df_total = df_total.iloc[1:]
     return df_total
 
 
@@ -1085,7 +1106,9 @@ def mi_search( data_source_dir, data_processed_dir,
                                 new_cols_fuzzy, similarity_threshold, max_sim_entries, n_rows = n_rows)
             # fuzzy_search (df_test, col_name_check, df_dict, name_col_dict_local, code_col_dict_local, new_cols_fuzzy, similarity_threshold, max_sim_entries=2, n_rows=np.inf)
         display(df_test.head(2))
+        print("df_test.shape:", df_test.shape)
         # print(list(dict_test_f02.items())[:2])
+        print("len(dict_test_f02):", len(dict_test_f02))
     else: 
         new_cols_fuzzy = []
         dict_test_f02 = None
@@ -1112,6 +1135,8 @@ def mi_search( data_source_dir, data_processed_dir,
                      similarity_threshold, max_sim_entries, n_rows = n_rows)
         display(df_test.head(2))
         # print(list(dict_test_f02_tmp.items())[:2])
+        print("df_test.shape:", df_test.shape)
+        print("len(dict_test_f02_tmp):", len(dict_test_f02_tmp))
         if dict_test_f02 is not None:
             for k,v in dict_test_f02.items():
                 try: #if dict_test_f02.get(k) is not None:
@@ -1120,9 +1145,11 @@ def mi_search( data_source_dir, data_processed_dir,
                 except Exception as err:
                     print(err, "dict_test_f02.get(k) is None", k)
         else: dict_test_f02 = dict_test_f02_tmp
+        print("len(dict_test_f02 - after semantic search 01:", len(dict_test_f02))
     else: 
         new_cols_semantic = []
         dict_test_f02 = None
+    print("len(dict_test_f02 - after semantic search 02:", len(dict_test_f02))
     if by_big_dict:
         df_mi_org_gos, df_mi_org_gos_prod_options, df_mi_national, dict_embedding_gos_multy, dict_embedding_gos_prod_options_multy, dict_embedding_national_multy, dict_lst_gos_prod_options = df_dicts
         
@@ -1222,13 +1249,15 @@ def mi_search( data_source_dir, data_processed_dir,
         
     fn_main = fn_check_file.split('.xlsx')[0] + '_processed_pivot'
     
+    print("len(dict_test_f02) - before save:" , len(dict_test_f02))
     df_test_f02 = dict_2_df(dict_test_f02, col_name_check, new_cols_fuzzy, new_cols_semantic,
              new_cols_semantic_gos, new_cols_semantic_national, new_cols_semantic_gos_options)
-    
+    print("df_test_f02.shape - before save:", df_test_f02.shape)
     #fn_save = save_df_to_excel(df_test, data_processed_dir, fn_main)
     # fn_save = save_df_to_excel(df_test_f02.set_index([col_name_check] + new_cols_fuzzy + new_cols_semantic\
     #             + new_cols_semantic_gos + new_cols_semantic_national + new_cols_semantic_gos_options), data_processed_dir, fn_main)
     fn_save = save_df_to_excel(df_test_f02.set_index(list(df_test_f02.columns)[:-1]), data_processed_dir, fn_main, index = True)
+    print("df_test_f02.shape - after save_df_to_excel:", df_test_f02.shape)
     format_excel_cols(data_processed_dir, fn_save, format_cols)
     fn_save_stat = save_stat(df_test, data_processed_dir, fn_check_file, max_sim_entries, similarity_threshold)
 
@@ -1236,7 +1265,10 @@ def mi_search( data_source_dir, data_processed_dir,
     fn_save = save_df_to_excel(df_test_f02, data_processed_dir, fn_main)
     format_excel_cols(data_processed_dir, fn_save, format_cols)
     
-    return df_test, df_test_f02
+    # work
+    # return df_test, df_test_f02
+    # debug
+    return df_test, df_test_f02, dict_test_f02
 
 def format_excel_cols(data_processed_dir, fn_xls, format_cols):
     wb = load_workbook(os.path.join(data_processed_dir, fn_xls))
